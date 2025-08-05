@@ -21,7 +21,7 @@ export default function InvitationsBadge() {
 
       const { data, error } = await supabase
         .from('invitations')
-        .select('id')
+        .select('id, expires_at')
         .eq('invited_email', user.email)
 
       if (error) {

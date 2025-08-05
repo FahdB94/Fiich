@@ -1,10 +1,13 @@
+import { Suspense } from 'react'
 import { VerifyEmailForm } from '@/components/auth/verify-email-form'
 
 export default function VerifyEmailPage() {
   return (
     <div className="min-h-screen flex items-center justify-center px-4 py-8">
       <div className="w-full max-w-md">
-        <VerifyEmailForm />
+        <Suspense fallback={<div>Chargement...</div>}>
+          <VerifyEmailForm />
+        </Suspense>
       </div>
     </div>
   )

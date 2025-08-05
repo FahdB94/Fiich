@@ -33,13 +33,18 @@ export function useSearch<T>({
     const filters: SearchFilters = {}
     
     Object.entries(filterFields).forEach(([field, config]) => {
-      if (!config) return
+      if (!config || typeof config !== 'object' || !('getValue' in config) || !('getLabel' in config)) return
+      
+      const typedConfig = config as {
+        getValue: (item: any) => string
+        getLabel: (item: any) => string
+      }
       
       const values = new Map<string, { label: string; count: number }>()
       
       data.forEach(item => {
-        const value = config.getValue(item as any)
-        const label = config.getLabel(item as any)
+        const value = typedConfig.getValue(item as any)
+        const label = typedConfig.getLabel(item as any)
         
         if (values.has(value)) {
           values.get(value)!.count++
@@ -80,9 +85,13 @@ export function useSearch<T>({
         return selectedFilters.every(filterId => {
           const [field, value] = filterId.split(':')
           const config = filterFields[field as keyof T]
-          if (!config) return true
+          if (!config || typeof config !== 'object' || !('getValue' in config)) return true
           
-          return config.getValue(item as any) === value
+          const typedConfig = config as {
+            getValue: (item: any) => string
+          }
+          
+          return typedConfig.getValue(item as any) === value
         })
       })
     }
