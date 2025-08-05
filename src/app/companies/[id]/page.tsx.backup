@@ -1,0 +1,225 @@
+'use client'
+
+import { useAuth } from '@/hooks/use-auth'
+import { useCompanies } from '@/hooks/use-companies'
+import { MainLayout } from '@/components/layout/main-layout'
+import { DocumentManager } from '@/components/documents'
+import ShareCompany from '@/components/sharing/share-company'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Separator } from '@/components/ui/separator'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { ArrowLeft, Edit, Share, Building, Mail, Phone, Globe, MapPin } from 'lucide-react'
+import Link from 'next/link'
+import { redirect, useParams } from 'next/navigation'
+import { useMemo } from 'react'
+
+export default function CompanyDetailPage() {
+  const { user, loading } = useAuth()
+  const { companies, loading: companiesLoading } = useCompanies(user?.id)
+  const params = useParams()
+  const companyId = params.id as string
+  const [activeTab, setActiveTab] = useState("overview")
+  // Redirect to signin if not authenticated
+  if (!loading && !user) {
+    redirect('/auth/signin')
+  }
+
+  const company = useMemo(() => 
+    companies.find(c => c.id === companyId), 
+    [companies, companyId]
+  )
+
+  if (loading || companiesLoading) {
+    return (
+      <MainLayout>
+        <div className="container mx-auto px-4 py-8">
+          <div className="space-y-8">
+            <div className="animate-pulse">
+              <div className="h-8 bg-muted rounded w-1/3 mb-2"></div>
+              <div className="h-4 bg-muted rounded w-1/2"></div>
+            </div>
+            <div className="h-96 bg-muted rounded-lg animate-pulse"></div>
+          </div>
+        </div>
+      </MainLayout>
+    )
+  }
+
+  if (!company) {
+    return (
+      <MainLayout>
+        <div className="container mx-auto px-4 py-8">
+          <div className="text-center py-16">
+            <Building className="mx-auto h-16 w-16 text-muted-foreground mb-6" />
+            <h2 className="text-2xl font-semibold mb-2">Entreprise non trouvée</h2>
+            <p className="text-muted-foreground mb-8">
+              Cette entreprise n'existe pas ou vous n'avez pas les droits pour y accéder.
+            </p>
+            <Button asChild>
+              <Link href="/companies">
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Retour aux entreprises
+              </Link>
+            </Button>
+          </div>
+        </div>
+      </MainLayout>
+    )
+  }
+
+  return (
+    <MainLayout>
+      <div className="container mx-auto px-4 py-8">
+        <div className="space-y-8">
+          {/* Header */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <Button variant="ghost" asChild>
+                <Link href="/companies">
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Retour
+                </Link>
+              </Button>
+              <div>
+                <h1 className="text-3xl font-bold tracking-tight">
+                  {company.company_name}
+                </h1>
+                <p className="text-muted-foreground">
+                  Fiche d'identité entreprise
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" asChild>
+                <Link href={`/companies/${company.id}/edit`}>
+                  <Edit className="h-4 w-4 mr-2" />
+                  Modifier
+                </Link>
+              </Button>
+              <Button onClick={() => setActiveTab("sharing")}>
+                <Share className="h-4 w-4 mr-2" />
+                Partager
+              </Button>
+            </div>
+          </div>
+
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="overview">Aperçu</TabsTrigger>
+              <TabsTrigger value="documents">Documents</TabsTrigger>
+              <TabsTrigger value="sharing">Partage</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="overview" className="space-y-6">
+              {/* Company Information */}
+              <div className="grid gap-6 md:grid-cols-2">
+                {/* Basic Info */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Building className="h-5 w-5" />
+                      Informations générales
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div>
+                      <dt className="text-sm font-medium text-muted-foreground">Raison sociale</dt>
+                      <dd className="text-sm">{company.company_name}</dd>
+                    </div>
+                    {company.siren && (
+                      <div>
+                        <dt className="text-sm font-medium text-muted-foreground">SIREN</dt>
+                        <dd className="text-sm font-mono">{company.siren}</dd>
+                      </div>
+                    )}
+                    {company.siret && (
+                      <div>
+                        <dt className="text-sm font-medium text-muted-foreground">SIRET</dt>
+                        <dd className="text-sm font-mono">{company.siret}</dd>
+                      </div>
+                    )}
+                    {company.description && (
+                      <div>
+                        <dt className="text-sm font-medium text-muted-foreground">Description</dt>
+                        <dd className="text-sm">{company.description}</dd>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Contact Info */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Mail className="h-5 w-5" />
+                      Contact
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="flex items-center gap-2">
+                      <Mail className="h-4 w-4 text-muted-foreground" />
+                      <a href={`mailto:${company.email}`} className="text-sm hover:underline">
+                        {company.email}
+                      </a>
+                    </div>
+                    {company.phone && (
+                      <div className="flex items-center gap-2">
+                        <Phone className="h-4 w-4 text-muted-foreground" />
+                        <a href={`tel:${company.phone}`} className="text-sm hover:underline">
+                          {company.phone}
+                        </a>
+                      </div>
+                    )}
+                    {company.website && (
+                      <div className="flex items-center gap-2">
+                        <Globe className="h-4 w-4 text-muted-foreground" />
+                        <a 
+                          href={company.website} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-sm hover:underline"
+                        >
+                          {company.website}
+                        </a>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Address */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <MapPin className="h-5 w-5" />
+                    Adresse
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-sm">
+                    <div>{company.address_line_1}</div>
+                    {company.address_line_2 && <div>{company.address_line_2}</div>}
+                    <div>
+                      {company.postal_code} {company.city}
+                    </div>
+                    <div>{company.country}</div>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="documents" className="space-y-6">
+              <DocumentManager companyId={company.id} />
+            </TabsContent>
+
+            <TabsContent value="sharing" className="space-y-6">
+              <ShareCompany companyId={company.id} companyName={company.company_name} />
+            </TabsContent>
+          </Tabs>
+        </div>
+      </div>
+    </MainLayout>
+  )
+}

@@ -1,0 +1,788 @@
+'use client'
+
+import { useState, useEffect, useRef } from 'react'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
+import { 
+  FileText, 
+  Upload, 
+  Download, 
+  Eye, 
+  Search, 
+  Grid3X3, 
+  List,
+  Filter,
+  Plus,
+  X,
+  AlertCircle
+} from 'lucide-react'
+import { format } from 'date-fns'
+import { fr } from 'date-fns/locale'
+import { supabase } from '@/lib/supabase'
+import { DocumentCard } from './document-card'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { toast } from 'sonner'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+
+interface Document {
+  id: string
+  name: string
+  file_path: string
+  mime_type: string
+  file_size: number
+  created_at: string
+  document_type?: string
+  document_version?: string
+  document_reference?: string
+  display_name?: string
+}
+
+interface EnhancedDocumentManagerProps {
+  companyId: string
+}
+
+export function EnhancedDocumentManager({ companyId }: EnhancedDocumentManagerProps) {
+  const [documents, setDocuments] = useState<Document[]>([])
+  const [loading, setLoading] = useState(true)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
+  const [filterType, setFilterType] = useState<string>('all')
+  const [showAddModal, setShowAddModal] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [documentName, setDocumentName] = useState('')
+  const [documentType, setDocumentType] = useState('')
+  const [documentReference, setDocumentReference] = useState('')
+  const [documentDescription, setDocumentDescription] = useState('')
+  const [isPublic, setIsPublic] = useState(false)
+  const [isDragOver, setIsDragOver] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (companyId) {
+      fetchDocuments()
+    }
+  }, [companyId])
+
+  const fetchDocuments = async () => {
+    try {
+      setLoading(true)
+      const { data, error } = await supabase
+        .from('documents')
+        .select('*')
+        .eq('company_id', companyId)
+        .order('created_at', { ascending: false })
+
+      if (error) {
+        console.error('Erreur lors de la récupération des documents:', error)
+      } else {
+        setDocuments(data || [])
+      }
+    } catch (error) {
+      console.error('Erreur:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleView = async (document: Document) => {
+    try {
+      console.log('Tentative d\'ouverture du document:', document.file_path)
+      
+      // Construire le chemin complet du fichier
+      const fullPath = `documents/${doc.file_path}`
+      console.log('🔍 Tentative d'ouverture du document:', doc.file_path)
+      console.log('📁 Chemin complet du fichier:', fullPath)
+      
+      // Créer l'URL signée directement avec le chemin complet
+      const { data, error } = await supabase.storage
+        .from('company-files')
+        .createSignedUrl(fullPath, 60)
+      
+      if (error) {
+        console.error('❌ Erreur création URL signée:', error)
+        console.error('📄 Fichier demandé:', fullPath)
+        alert('Erreur lors de l\'ouverture du document')
+        return
+      }
+      
+      if (data?.signedUrl) {
+        console.log('URL signée générée:', data.signedUrl)
+        window.open(data.signedUrl, '_blank')
+      } else {
+        console.error('URL signée non générée')
+        alert('Impossible d\'ouvrir le document')
+      }
+    } catch (error) {
+      console.error('Erreur lors de l\'ouverture:', error)
+      alert('Erreur lors de l\'ouverture du document')
+    }
+  }
+
+  const handleDownload = async (doc: Document) => {
+    try {
+      console.log('🔍 Tentative de téléchargement du document:', doc.file_path)
+      console.log('�� Chemin complet du fichier:', fullPath)
+      
+      // Construire le chemin complet du fichier
+      const fullPath = `documents/${doc.file_path}`
+      console.log('🔍 Tentative d'ouverture du document:', doc.file_path)
+      console.log('📁 Chemin complet du fichier:', fullPath)
+      
+      // Créer l'URL signée directement avec le chemin complet
+      const { data, error } = await supabase.storage
+        .from('company-files')
+        .createSignedUrl(fullPath, 60)
+      
+      if (error) {
+        console.error('❌ Erreur création URL signée:', error)
+        console.error('📄 Fichier demandé:', fullPath)
+        alert('Erreur lors du téléchargement')
+        return
+      }
+      
+      if (data?.signedUrl) {
+        console.log('URL signée générée:', data.signedUrl)
+        const link = document.createElement('a')
+        link.href = data.signedUrl
+        link.download = doc.name || doc.display_name || 'document'
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+      } else {
+        console.error('URL signée non générée')
+        alert('Impossible de télécharger le document')
+      }
+    } catch (error) {
+      console.error('Erreur lors du téléchargement:', error)
+      alert('Erreur lors du téléchargement')
+    }
+  }
+
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (file) {
+      setSelectedFile(file)
+      if (!documentName) {
+        setDocumentName(file.name)
+      }
+    }
+  }
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragOver(true)
+  }
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragOver(false)
+  }
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragOver(false)
+    
+    const files = e.dataTransfer.files
+    if (files.length > 0) {
+      const file = files[0]
+      setSelectedFile(file)
+      if (!documentName) {
+        setDocumentName(file.name)
+      }
+    }
+  }
+
+  const handleUpload = async () => {
+    if (!selectedFile) {
+      toast.error("Veuillez sélectionner un fichier")
+      return
+    }
+
+    setUploading(true)
+
+    try {
+      // Générer un nom de fichier unique
+      const timestamp = Date.now()
+      const fileName = `${timestamp}-${selectedFile.name}`
+      const filePath = `${companyId}/${fileName}`
+
+      console.log('Upload du fichier:', filePath)
+
+      // Upload vers Supabase Storage
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('company-files')
+        .upload(`documents/${filePath}`, selectedFile)
+
+      if (uploadError) {
+        console.error('Erreur upload:', uploadError)
+        toast.error(`Erreur d'upload: ${uploadError.message}`)
+        return
+      }
+
+      // Créer l'entrée en base de données
+      const { error: dbError } = await supabase
+        .from('documents')
+        .insert({
+          name: documentName || selectedFile.name,
+          file_path: filePath,
+          file_size: selectedFile.size,
+          mime_type: selectedFile.type,
+          company_id: companyId,
+          is_public: isPublic,
+          document_type: documentType || null,
+          document_reference: documentReference || null,
+          display_name: documentName || selectedFile.name,
+        })
+
+      if (dbError) {
+        console.error('Erreur base de données:', dbError)
+        toast.error(`Erreur d'enregistrement: ${dbError.message}`)
+        return
+      }
+
+      console.log('Document ajouté avec succès')
+      toast.success("Document ajouté avec succès")
+
+      // Réinitialiser le formulaire
+      setSelectedFile(null)
+      setDocumentName('')
+      setDocumentType('')
+      setDocumentReference('')
+      setDocumentDescription('')
+      setIsPublic(false)
+      setShowAddModal(false)
+
+      // Recharger la liste
+      fetchDocuments()
+
+    } catch (error) {
+      console.error('Erreur générale:', error)
+      toast.error("Erreur lors de l'ajout du document")
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  const resetForm = () => {
+    setSelectedFile(null)
+    setDocumentName('')
+    setDocumentType('')
+    setDocumentReference('')
+    setDocumentDescription('')
+    setIsPublic(false)
+    setIsDragOver(false)
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
+  }
+
+  const filteredDocuments = documents.filter(doc => {
+    const matchesSearch = doc.display_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         doc.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         doc.document_type?.toLowerCase().includes(searchQuery.toLowerCase())
+    
+    const matchesFilter = filterType === 'all' || doc.document_type === filterType
+    
+    return matchesSearch && matchesFilter
+  })
+
+  const documentTypes = Array.from(new Set(documents.map(doc => doc.document_type).filter(Boolean)))
+
+  const totalSize = documents.reduce((sum, doc) => sum + doc.file_size, 0)
+
+  return (
+    <div className="space-y-6">
+      {/* Header avec statistiques */}
+      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/50 dark:to-indigo-950/50 rounded-lg p-6">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="p-2 bg-blue-100 dark:bg-blue-900/50 rounded-lg">
+            <FileText className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+          </div>
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+              Gestion des Documents
+            </h2>
+            <p className="text-gray-600 dark:text-gray-400">
+              Gérez et organisez tous les documents de votre entreprise
+            </p>
+          </div>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Card className="bg-white/50 dark:bg-gray-800/50 border-0">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-green-100 dark:bg-green-900/50 rounded-lg">
+                  <FileText className="h-4 w-4 text-green-600 dark:text-green-400" />
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Total Documents</p>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                    {documents.length}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card className="bg-white/50 dark:bg-gray-800/50 border-0">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-100 dark:bg-blue-900/50 rounded-lg">
+                  <Download className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Taille Totale</p>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                    {(totalSize / (1024 * 1024)).toFixed(1)} MB
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card className="bg-white/50 dark:bg-gray-800/50 border-0">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-purple-100 dark:bg-purple-900/50 rounded-lg">
+                  <Filter className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Types</p>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                    {documentTypes.length}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      {/* Contrôles de recherche et filtres */}
+      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+        <div className="flex gap-2">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Input
+              placeholder="Rechercher un document..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 w-64"
+            />
+          </div>
+          
+          <select
+            value={filterType}
+            onChange={(e) => setFilterType(e.target.value)}
+            className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+          >
+            <option value="all">Tous les types</option>
+            {documentTypes.map(type => (
+              <option key={type} value={type}>{type}</option>
+            ))}
+          </select>
+        </div>
+        
+        <div className="flex gap-2">
+          <Button
+            variant={viewMode === 'grid' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setViewMode('grid')}
+          >
+            <Grid3X3 className="h-4 w-4 mr-2" />
+            Grille
+          </Button>
+          <Button
+            variant={viewMode === 'list' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setViewMode('list')}
+          >
+            <List className="h-4 w-4 mr-2" />
+            Liste
+          </Button>
+        </div>
+      </div>
+
+      {/* Liste des documents */}
+      {loading ? (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {[...Array(6)].map((_, i) => (
+            <Card key={i} className="animate-pulse">
+              <CardHeader>
+                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
+                <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                  <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-2/3"></div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : documents.length === 0 ? (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <FileText className="h-12 w-12 text-gray-400 mb-4" />
+            <h3 className="text-lg font-semibold mb-2">Aucun document</h3>
+            <p className="text-gray-500 text-center mb-6 max-w-md">
+              Aucun document n'a encore été ajouté à cette entreprise.
+            </p>
+            <Dialog open={showAddModal} onOpenChange={setShowAddModal}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Ajouter un document
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[600px]">
+                <DialogHeader>
+                  <DialogTitle>Ajouter un nouveau document</DialogTitle>
+                  <DialogDescription>
+                    Sélectionnez un fichier et ajoutez les informations nécessaires.
+                  </DialogDescription>
+                </DialogHeader>
+                
+                <div className="space-y-4">
+                  {/* Sélection de fichier */}
+                  <div className="space-y-2">
+                    <Label htmlFor="file">Fichier</Label>
+                    <div 
+                      className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
+                        isDragOver 
+                          ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/50' 
+                          : 'border-gray-300 dark:border-gray-600'
+                      }`}
+                      onDragOver={handleDragOver}
+                      onDragLeave={handleDragLeave}
+                      onDrop={handleDrop}
+                    >
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        id="file"
+                        onChange={handleFileSelect}
+                        className="hidden"
+                        accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png"
+                      />
+                      {selectedFile ? (
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-center gap-2">
+                            <FileText className="h-8 w-8 text-blue-500" />
+                            <span className="font-medium">{selectedFile.name}</span>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedFile(null)
+                                if (fileInputRef.current) {
+                                  fileInputRef.current.value = ''
+                                }
+                              }}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                          <p className="text-sm text-gray-500">
+                            {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+                          </p>
+                        </div>
+                      ) : (
+                        <div
+                          className="cursor-pointer"
+                          onClick={() => fileInputRef.current?.click()}
+                        >
+                          <Upload className="h-12 w-12 text-gray-400 mx-auto mb-2" />
+                          <p className="text-sm text-gray-600 dark:text-gray-400">
+                            Glissez-déposez un fichier ici ou cliquez pour sélectionner
+                          </p>
+                          <p className="text-xs text-gray-500 mt-1">
+                            PDF, DOC, XLS, Images acceptés
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Informations du document */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="name">Nom du document</Label>
+                      <Input
+                        id="name"
+                        value={documentName}
+                        onChange={(e) => setDocumentName(e.target.value)}
+                        placeholder="Nom du document"
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="type">Type de document</Label>
+                      <Select value={documentType} onValueChange={setDocumentType}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Sélectionner un type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="KBIS">KBIS</SelectItem>
+                          <SelectItem value="RIB">RIB</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="reference">Référence</Label>
+                      <Input
+                        id="reference"
+                        value={documentReference}
+                        onChange={(e) => setDocumentReference(e.target.value)}
+                        placeholder="Référence du document"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="description">Description</Label>
+                    <Textarea
+                      id="description"
+                      value={documentDescription}
+                      onChange={(e) => setDocumentDescription(e.target.value)}
+                      placeholder="Description du document (optionnel)"
+                      rows={3}
+                    />
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="public"
+                      checked={isPublic}
+                      onChange={(e) => setIsPublic(e.target.checked)}
+                      className="rounded"
+                    />
+                    <Label htmlFor="public">Document public</Label>
+                  </div>
+                </div>
+
+                <DialogFooter>
+                  <Button variant="outline" onClick={resetForm}>
+                    Annuler
+                  </Button>
+                  <Button 
+                    onClick={handleUpload} 
+                    disabled={!selectedFile || uploading}
+                  >
+                    {uploading ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                        Upload en cours...
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="h-4 w-4 mr-2" />
+                        Ajouter le document
+                      </>
+                    )}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className={viewMode === 'grid' 
+          ? "grid gap-4 md:grid-cols-2 lg:grid-cols-3" 
+          : "space-y-4"
+        }>
+          {filteredDocuments.map((document) => (
+            <DocumentCard 
+              key={document.id} 
+              document={document} 
+              onView={handleView} 
+              onDownload={handleDownload} 
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Bouton d'ajout pour les cas où il y a déjà des documents */}
+      {documents.length > 0 && (
+        <div className="flex justify-center">
+          <Dialog open={showAddModal} onOpenChange={setShowAddModal}>
+            <DialogTrigger asChild>
+              <Button size="lg">
+                <Plus className="h-4 w-4 mr-2" />
+                Ajouter un document
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[600px]">
+              <DialogHeader>
+                <DialogTitle>Ajouter un nouveau document</DialogTitle>
+                <DialogDescription>
+                  Sélectionnez un fichier et ajoutez les informations nécessaires.
+                </DialogDescription>
+              </DialogHeader>
+              
+              <div className="space-y-4">
+                {/* Sélection de fichier */}
+                <div className="space-y-2">
+                  <Label htmlFor="file">Fichier</Label>
+                  <div 
+                    className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
+                      isDragOver 
+                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/50' 
+                        : 'border-gray-300 dark:border-gray-600'
+                    }`}
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
+                  >
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      id="file"
+                      onChange={handleFileSelect}
+                      className="hidden"
+                      accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png"
+                    />
+                    {selectedFile ? (
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-center gap-2">
+                          <FileText className="h-8 w-8 text-blue-500" />
+                          <span className="font-medium">{selectedFile.name}</span>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedFile(null)
+                              if (fileInputRef.current) {
+                                fileInputRef.current.value = ''
+                              }
+                            }}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                        <p className="text-sm text-gray-500">
+                          {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+                        </p>
+                      </div>
+                    ) : (
+                      <div
+                        className="cursor-pointer"
+                        onClick={() => fileInputRef.current?.click()}
+                      >
+                        <Upload className="h-12 w-12 text-gray-400 mx-auto mb-2" />
+                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                          Glissez-déposez un fichier ici ou cliquez pour sélectionner
+                        </p>
+                        <p className="text-xs text-gray-500 mt-1">
+                          PDF, DOC, XLS, Images acceptés
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Informations du document */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="name">Nom du document</Label>
+                    <Input
+                      id="name"
+                      value={documentName}
+                      onChange={(e) => setDocumentName(e.target.value)}
+                      placeholder="Nom du document"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="type">Type de document</Label>
+                    <Select value={documentType} onValueChange={setDocumentType}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Sélectionner un type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="KBIS">KBIS</SelectItem>
+                        <SelectItem value="RIB">RIB</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="reference">Référence</Label>
+                    <Input
+                      id="reference"
+                      value={documentReference}
+                      onChange={(e) => setDocumentReference(e.target.value)}
+                      placeholder="Référence du document"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="description">Description</Label>
+                  <Textarea
+                    id="description"
+                    value={documentDescription}
+                    onChange={(e) => setDocumentDescription(e.target.value)}
+                    placeholder="Description du document (optionnel)"
+                    rows={3}
+                  />
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="public"
+                    checked={isPublic}
+                    onChange={(e) => setIsPublic(e.target.checked)}
+                    className="rounded"
+                  />
+                  <Label htmlFor="public">Document public</Label>
+                </div>
+              </div>
+
+              <DialogFooter>
+                <Button variant="outline" onClick={resetForm}>
+                  Annuler
+                </Button>
+                <Button 
+                  onClick={handleUpload} 
+                  disabled={!selectedFile || uploading}
+                >
+                  {uploading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Upload en cours...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="h-4 w-4 mr-2" />
+                      Ajouter le document
+                    </>
+                  )}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
+      )}
+    </div>
+  )
+}

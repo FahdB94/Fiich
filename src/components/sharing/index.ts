@@ -1,0 +1,1 @@
+export { default as ShareCompany } from './share-company' 

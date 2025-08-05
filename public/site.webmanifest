@@ -1,0 +1,16 @@
+{
+  "name": "Fiich - Gestion d'entreprises",
+  "short_name": "Fiich",
+  "description": "Application de gestion d'entreprises et de partage de documents",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#000000",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "any",
+      "type": "image/x-icon"
+    }
+  ]
+}

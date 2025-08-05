@@ -1,0 +1,34 @@
+import { randomBytes } from 'crypto'
+
+/**
+ * Génère un token sécurisé pour les partages d'entreprise
+ */
+export function generateShareToken(): string {
+  return randomBytes(32)
+    .toString('base64')
+    .replace(/[+\/]/g, '-')
+    .replace(/=/g, '')
+    .replace(/[^a-zA-Z0-9\-_]/g, '')
+}
+
+/**
+ * Génère un token sécurisé pour les invitations
+ */
+export function generateInvitationToken(): string {
+  return randomBytes(32)
+    .toString('base64')
+    .replace(/[+\/]/g, '-')
+    .replace(/=/g, '')
+    .replace(/[^a-zA-Z0-9\-_]/g, '')
+}
+
+/**
+ * Génère un nom de fichier unique
+ */
+export function generateUniqueFileName(originalName: string): string {
+  const timestamp = Date.now()
+  const random = Math.random().toString(36).substring(2, 15)
+  const extension = originalName.split('.').pop()
+  const nameWithoutExtension = originalName.replace(/\.[^/.]+$/, '')
+  return `${nameWithoutExtension}-${timestamp}-${random}.${extension}`
+}

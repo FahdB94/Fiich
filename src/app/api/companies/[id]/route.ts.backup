@@ -1,0 +1,206 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { createServiceClient } from '@/lib/supabase'
+
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {) {
+    const supabase = createServiceClient()
+    const { id: companyId } = await params
+
+    if (!companyId) {
+      return NextResponse.json(
+        { error: 'ID de l\'entreprise requis' },
+        { status: 400 }
+      )
+    }
+
+    // Récupérer l'entreprise
+    const { data: company, error: companyError } = await supabase
+      .from('companies')
+      .select('*')
+      .eq('id', companyId)
+      .single()
+
+    if (companyError || !company) {
+      return NextResponse.json(
+        { error: 'Entreprise non trouvée' },
+        { status: 404 }
+      )
+    }
+
+    // Récupérer les documents publics de l'entreprise
+    const { data: documents, error: docsError } = await supabase
+      .from('documents')
+      .select('*')
+      .eq('company_id', companyId)
+      .eq('is_public', true)
+      .order('created_at', { ascending: false })
+
+    if (docsError) {
+      console.error('Erreur lors de la récupération des documents:', docsError)
+    }
+
+    return NextResponse.json({
+      success: true,
+      data: {
+        company,
+        documents: documents || []
+      }
+    })
+
+  } catch (error) {
+    console.error('Erreur lors de la récupération de l\'entreprise:', error)
+    return NextResponse.json(
+      { error: 'Erreur interne du serveur' },
+      { status: 500 }
+    )
+  }
+}
+
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    // Récupérer le token d'authentification
+    const authHeader = request.headers.get('authorization')
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return NextResponse.json(
+        { error: 'Token d\'authentification manquant' },
+        { status: 401 }
+      )
+    }
+
+    const token = authHeader.replace('Bearer ', '')
+    const supabase = createServiceClient()
+
+    // Vérifier l'authentification
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
+    if (authError || !user) {
+      return NextResponse.json(
+        { error: 'Non authentifié' },
+        { status: 401 }
+      )
+    }
+
+    const { id: companyId } = await params
+    const updates = await request.json()
+
+    // Vérifier que l'utilisateur possède l'entreprise
+    const { data: company, error: companyError } = await supabase
+      .from('companies')
+      .select('*')
+      .eq('id', companyId)
+      .eq('user_id', user.id)
+      .single()
+
+    if (companyError || !company) {
+      return NextResponse.json(
+        { error: 'Entreprise non trouvée ou vous n\'avez pas les droits pour la modifier' },
+        { status: 404 }
+      )
+    }
+
+    // Mettre à jour l'entreprise
+    const { data: updatedCompany, error: updateError } = await supabase
+      .from('companies')
+      .update({
+        ...updates,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', companyId)
+      .eq('user_id', user.id)
+      .select()
+      .single()
+
+    if (updateError) {
+      console.error('Erreur lors de la mise à jour:', updateError)
+      return NextResponse.json(
+        { error: 'Erreur lors de la mise à jour de l\'entreprise' },
+        { status: 500 }
+      )
+    }
+
+    return NextResponse.json({
+      success: true,
+      data: updatedCompany
+    })
+
+  } catch (error) {
+    console.error('Erreur lors de la mise à jour de l\'entreprise:', error)
+    return NextResponse.json(
+      { error: 'Erreur interne du serveur' },
+      { status: 500 }
+    )
+  }
+}
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    // Récupérer le token d'authentification
+    const authHeader = request.headers.get('authorization')
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return NextResponse.json(
+        { error: 'Token d\'authentification manquant' },
+        { status: 401 }
+      )
+    }
+
+    const token = authHeader.replace('Bearer ', '')
+    const supabase = createServiceClient()
+
+    // Vérifier l'authentification
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
+    if (authError || !user) {
+      return NextResponse.json(
+        { error: 'Non authentifié' },
+        { status: 401 }
+      )
+    }
+
+    const { id: companyId } = await params
+
+    // Vérifier que l'utilisateur possède l'entreprise
+    const { data: company, error: companyError } = await supabase
+      .from('companies')
+      .select('*')
+      .eq('id', companyId)
+      .eq('user_id', user.id)
+      .single()
+
+    if (companyError || !company) {
+      return NextResponse.json(
+        { error: 'Entreprise non trouvée ou vous n\'avez pas les droits pour la supprimer' },
+        { status: 404 }
+      )
+    }
+
+    // Supprimer l'entreprise (cascade supprimera les documents et partages associés)
+    const { error: deleteError } = await supabase
+      .from('companies')
+      .delete()
+      .eq('id', companyId)
+      .eq('user_id', user.id)
+
+    if (deleteError) {
+      console.error('Erreur lors de la suppression:', deleteError)
+      return NextResponse.json(
+        { error: 'Erreur lors de la suppression de l\'entreprise' },
+        { status: 500 }
+      )
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: 'Entreprise supprimée avec succès'
+    })
+
+  } catch (error) {
+    console.error('Erreur lors de la suppression de l\'entreprise:', error)
+    return NextResponse.json(
+      { error: 'Erreur interne du serveur' },
+      { status: 500 }
+    )
+  }
+}
