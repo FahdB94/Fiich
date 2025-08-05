@@ -6,27 +6,20 @@ import { useCompanies } from '@/hooks/use-companies'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Input } from '@/components/ui/input'
 import { SearchInput } from '@/components/ui/search-input'
 import { useSearch } from '@/hooks/use-search'
 import Link from 'next/link'
 import { 
   Building, 
   Plus, 
-  Search, 
   Edit, 
   Eye, 
   MoreHorizontal,
   MapPin,
   Mail,
   Phone,
-  ExternalLink,
-  Hash,
-  Filter,
   Grid3X3,
   List,
-  RefreshCw,
-  ArrowRight,
   Calendar,
   Users,
   FileText
@@ -40,13 +33,6 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { supabase } from '@/lib/supabase'
 import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
@@ -76,16 +62,6 @@ export default function CompaniesPage() {
         label: 'Ville',
         getValue: (company) => company.city || '',
         getLabel: (company) => company.city || 'Non renseignée'
-      },
-      hasDocuments: {
-        label: 'Documents',
-        getValue: (company) => (companyStats[company.id]?.documents || 0) > 0 ? 'with-documents' : 'no-documents',
-        getLabel: (company) => (companyStats[company.id]?.documents || 0) > 0 ? 'Avec documents' : 'Sans documents'
-      },
-      hasShares: {
-        label: 'Partages',
-        getValue: (company) => (companyStats[company.id]?.shares || 0) > 0 ? 'shared' : 'not-shared',
-        getLabel: (company) => (companyStats[company.id]?.shares || 0) > 0 ? 'Partagée' : 'Non partagée'
       }
     },
     sortOptions: [
@@ -177,30 +153,8 @@ export default function CompaniesPage() {
     }
   }
 
-  // Filter companies based on search term and filters
-  const filteredCompanies = companies.filter(company => {
-    const matchesSearch = 
-    company.company_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    company.city.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      company.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (company.siren && company.siren.includes(searchTerm)) ||
-      (company.siret && company.siret.includes(searchTerm))
-
-    if (!matchesSearch) return false
-
-    switch (filterType) {
-      case 'recent':
-        const oneWeekAgo = new Date()
-        oneWeekAgo.setDate(oneWeekAgo.getDate() - 7)
-        return new Date(company.created_at) > oneWeekAgo
-      case 'with-documents':
-        return companyStats[company.id]?.documents > 0
-      case 'shared':
-        return companyStats[company.id]?.shares > 0
-      default:
-        return true
-    }
-  })
+  // Les données filtrées sont maintenant gérées par le hook useSearch
+  // Ancienne logique supprimée
 
   const formatAddress = (company: any) => {
     const parts = [
@@ -283,46 +237,54 @@ export default function CompaniesPage() {
             </div>
           </div>
 
-          {/* Filtres et recherche */}
-          <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
-            <div className="flex gap-4 items-center w-full sm:w-auto">
-              <div className="relative flex-1 sm:flex-none">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-            <Input
+          {/* Recherche et filtres avancés */}
+          <div className="space-y-4">
+            <SearchInput
               placeholder="Rechercher une entreprise..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
+              value={searchQuery}
+              onValueChange={setSearchQuery}
+              filters={availableFilters}
+              selectedFilters={selectedFilters}
+              onFiltersChange={setSelectedFilters}
+              onClear={clearSearch}
+              className="max-w-2xl"
             />
-          </div>
-              <Select value={filterType} onValueChange={(value: any) => setFilterType(value)}>
-                <SelectTrigger className="w-[180px]">
-                  <Filter className="h-4 w-4 mr-2" />
-                  <SelectValue placeholder="Filtrer" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Toutes</SelectItem>
-                  <SelectItem value="recent">Récentes (7j)</SelectItem>
-                  <SelectItem value="with-documents">Avec documents</SelectItem>
-                  <SelectItem value="shared">Partagées</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex gap-2">
-              <Button
-                variant={viewMode === 'grid' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setViewMode('grid')}
-              >
-                <Grid3X3 className="h-4 w-4" />
-              </Button>
-              <Button
-                variant={viewMode === 'list' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setViewMode('list')}
-              >
-                <List className="h-4 w-4" />
-              </Button>
+            
+            {/* Statistiques de recherche */}
+            {(stats.hasSearch || stats.hasFilters) && (
+              <div className="flex items-center justify-between text-sm text-muted-foreground">
+                <span>
+                  {stats.filtered} résultat{stats.filtered > 1 ? 's' : ''} sur {stats.total} entreprise{stats.total > 1 ? 's' : ''}
+                </span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={clearSearch}
+                  className="h-6 px-2 text-xs"
+                >
+                  Effacer la recherche
+                </Button>
+              </div>
+            )}
+            
+            {/* Contrôles d'affichage */}
+            <div className="flex items-center justify-between">
+              <div className="flex gap-2">
+                <Button
+                  variant={viewMode === 'grid' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setViewMode('grid')}
+                >
+                  <Grid3X3 className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant={viewMode === 'list' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setViewMode('list')}
+                >
+                  <List className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
           </div>
 
@@ -442,18 +404,18 @@ export default function CompaniesPage() {
                 <div className="relative mb-6">
                   <div className="absolute inset-0 bg-gradient-to-r from-orange-500 to-red-600 rounded-full blur-xl opacity-20"></div>
                   <div className="relative bg-gradient-to-r from-orange-500 to-red-600 p-4 rounded-full">
-                    <Search className="h-8 w-8 text-white" />
+                    <Building className="h-8 w-8 text-white" />
                   </div>
                 </div>
                 <h3 className="text-xl font-semibold mb-2 text-orange-900">
                   Aucun résultat
                 </h3>
                 <p className="text-orange-800 text-center mb-8 max-w-md">
-                  Aucune entreprise ne correspond à votre recherche "{searchTerm}".
+                  Aucune entreprise ne correspond à votre recherche "{searchQuery}".
                 </p>
                 <Button 
                   variant="outline" 
-                  onClick={() => setSearchTerm('')}
+                  onClick={clearSearch}
                   className="border-orange-300 text-orange-700 hover:bg-orange-50"
                 >
                   Effacer la recherche
@@ -492,15 +454,18 @@ export default function CompaniesPage() {
                           <div className="flex items-start gap-2 text-sm text-muted-foreground">
                             <MapPin className="h-3 w-3 flex-shrink-0 mt-0.5" />
                             <div className="min-w-0 flex-1">
-                              {Array.isArray(formatAddress(company)) ? (
-                                formatAddress(company).map((line, index) => (
-                                  <div key={index} className="leading-tight text-xs">
-                                    {line}
-                                  </div>
-                                ))
-                              ) : (
-                                <span className="text-xs">{formatAddress(company)}</span>
-                              )}
+                              {(() => {
+                                const address = formatAddress(company);
+                                if (Array.isArray(address)) {
+                                  return address.map((line, index) => (
+                                    <div key={index} className="leading-tight text-xs">
+                                      {line}
+                                    </div>
+                                  ));
+                                } else {
+                                  return <span className="text-xs">{address}</span>;
+                                }
+                              })()}
                             </div>
                           </div>
                         </div>
@@ -606,9 +571,9 @@ export default function CompaniesPage() {
           {/* Stats */}
           {companies.length > 0 && (
             <div className="text-center text-sm text-muted-foreground">
-              {searchTerm ? (
+              {(stats.hasSearch || stats.hasFilters) ? (
                 <>
-                  {filteredCompanies.length} résultat{filteredCompanies.length > 1 ? 's' : ''} sur {companies.length} entreprise{companies.length > 1 ? 's' : ''}
+                  {stats.filtered} résultat{stats.filtered > 1 ? 's' : ''} sur {stats.total} entreprise{stats.total > 1 ? 's' : ''}
                 </>
               ) : (
                 <>

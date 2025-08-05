@@ -51,6 +51,14 @@ export interface CompanyContact {
 }
 
 // Document types
+export type DocumentType = 
+  | 'rib' 
+  | 'kbis' 
+  | 'contrat' 
+  | 'facture' 
+  | 'devis' 
+  | 'autre'
+
 export interface Document {
   id: string
   company_id: string
@@ -59,7 +67,7 @@ export interface Document {
   file_path: string
   file_size: number
   mime_type: string
-  document_type: 'rib' | 'kbis' | 'contrat' | 'facture' | 'devis' | 'autre'
+  document_type: DocumentType
   document_reference?: string
   document_version?: string
   is_public: boolean

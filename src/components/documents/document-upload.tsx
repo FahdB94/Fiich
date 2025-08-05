@@ -30,8 +30,10 @@ interface DocumentUploadProps {
 const documentTypeLabels: Record<DocumentType, string> = {
   rib: 'RIB (Relevé d\'Identité Bancaire)',
   kbis: 'Kbis',
-  cgv: 'CGV (Conditions Générales de Vente)',
-  other: 'Autre document'
+  contrat: 'Contrat',
+  facture: 'Facture',
+  devis: 'Devis',
+  autre: 'Autre document'
 }
 
 export function DocumentUpload({ companyId, onUploadSuccess, onUploadComplete }: DocumentUploadProps) {
@@ -53,7 +55,7 @@ export function DocumentUpload({ companyId, onUploadSuccess, onUploadComplete }:
   } = useForm<DocumentUploadData & { file?: File }>({
     resolver: zodResolver(documentUploadSchema),
     defaultValues: {
-      type: 'other',
+      type: 'autre',
       is_public: false
     }
   })
@@ -78,7 +80,7 @@ export function DocumentUpload({ companyId, onUploadSuccess, onUploadComplete }:
         const validation = validateFile(file)
         
         if (!validation.isValid) {
-          toast.error(validation.error)
+          toast.error(validation.error || 'Erreur de validation du fichier')
           return
         }
 

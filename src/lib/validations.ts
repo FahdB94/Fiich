@@ -49,9 +49,9 @@ export const companySchema = z.object({
 
 // Document validation schemas
 export const documentUploadSchema = z.object({
-  type: z.string().min(1, 'Le type de document est requis'),
+  type: z.enum(['rib', 'kbis', 'contrat', 'facture', 'devis', 'autre']),
   name: z.string().min(1, 'Le nom du document est requis').max(100, 'Le nom ne peut pas dépasser 100 caractères'),
-  is_public: z.boolean().default(false),
+  is_public: z.boolean(),
 })
 
 // Share validation schemas

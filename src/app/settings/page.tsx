@@ -144,17 +144,10 @@ export default function SettingsPage() {
       }
 
       setSettings({ ...settings, [key]: value })
-      toast({
-        title: "Paramètre mis à jour",
-        description: "Votre préférence a été sauvegardée.",
-      })
+      toast.success("Paramètre mis à jour !")
     } catch (error) {
       console.error('Erreur lors de la mise à jour:', error)
-      toast({
-        title: "Erreur",
-        description: "Impossible de sauvegarder le paramètre.",
-        variant: "destructive",
-      })
+      toast.error("Impossible de sauvegarder le paramètre.")
     } finally {
       setIsLoading(false)
     }
@@ -164,20 +157,12 @@ export default function SettingsPage() {
     if (!user) return
 
     if (newPassword !== confirmPassword) {
-      toast({
-        title: "Erreur",
-        description: "Les mots de passe ne correspondent pas.",
-        variant: "destructive",
-      })
+      toast.error("Les mots de passe ne correspondent pas.")
       return
     }
 
     if (newPassword.length < 6) {
-      toast({
-        title: "Erreur",
-        description: "Le nouveau mot de passe doit contenir au moins 6 caractères.",
-        variant: "destructive",
-      })
+      toast.error("Le nouveau mot de passe doit contenir au moins 6 caractères.")
       return
     }
 
@@ -191,21 +176,14 @@ export default function SettingsPage() {
         throw error
       }
 
-      toast({
-        title: "Mot de passe mis à jour",
-        description: "Votre mot de passe a été changé avec succès.",
-      })
+      toast.success("Mot de passe mis à jour avec succès.")
 
       setCurrentPassword('')
       setNewPassword('')
       setConfirmPassword('')
     } catch (error) {
       console.error('Erreur lors du changement de mot de passe:', error)
-      toast({
-        title: "Erreur",
-        description: "Impossible de changer le mot de passe.",
-        variant: "destructive",
-      })
+      toast.error("Impossible de changer le mot de passe.")
     } finally {
       setIsChangingPassword(false)
     }
@@ -214,10 +192,7 @@ export default function SettingsPage() {
   const handleSignOut = async () => {
     try {
       await signOut()
-      toast({
-        title: "Déconnexion",
-        description: "Vous avez été déconnecté avec succès.",
-      })
+      toast.success("Vous avez été déconnecté avec succès.")
     } catch (error) {
       console.error('Erreur lors de la déconnexion:', error)
     }

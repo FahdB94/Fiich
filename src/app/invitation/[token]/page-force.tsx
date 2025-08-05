@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Building, User, Mail, Clock, XCircle } from 'lucide-react'
-import MainLayout from '@/components/layout/main-layout'
+import { MainLayout } from '@/components/layout/main-layout'
 
 interface Invitation {
   id: string

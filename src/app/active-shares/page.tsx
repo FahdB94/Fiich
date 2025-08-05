@@ -352,7 +352,7 @@ export default function ActiveSharesPage() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => handleRevokeShare(share.id, share.shared_with_company_name)}
+                        onClick={() => handleRevokeShare(share.id, share.shared_with_company_name || 'cette entreprise')}
                         disabled={revokingId === share.id}
                         className="text-red-600 hover:text-red-700 hover:bg-red-50"
                         title="Révoquer l'accès"

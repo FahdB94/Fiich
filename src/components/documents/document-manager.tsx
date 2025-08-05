@@ -168,9 +168,7 @@ export function DocumentManager({ companyId, className }: DocumentManagerProps) 
           </DialogHeader>
           {selectedDocument && (
             <DocumentViewer
-              document={selectedDocument}
-              onDownload={() => handleDownload(selectedDocument)}
-              onClose={() => setShowViewer(false)}
+              companyId={companyId}
             />
           )}
         </DialogContent>

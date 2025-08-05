@@ -346,15 +346,18 @@ export default function TableauDeBordPage() {
                             <div className="flex items-start gap-2 text-sm text-muted-foreground">
                               <MapPin className="h-3 w-3 flex-shrink-0 mt-0.5" />
                               <div className="min-w-0 flex-1">
-                                {Array.isArray(formatAddress(company)) ? (
-                                  formatAddress(company).map((line, index) => (
+                                                              {(() => {
+                                const address = formatAddress(company);
+                                if (Array.isArray(address)) {
+                                  return address.map((line, index) => (
                                     <div key={index} className="leading-tight text-xs">
                                       {line}
                                     </div>
-                                  ))
-                                ) : (
-                                  <span className="text-xs">{formatAddress(company)}</span>
-                                )}
+                                  ));
+                                } else {
+                                  return <span className="text-xs">{address}</span>;
+                                }
+                              })()}
                               </div>
                             </div>
                           </div>

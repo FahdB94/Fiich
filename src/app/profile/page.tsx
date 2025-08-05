@@ -177,20 +177,13 @@ export default function ProfilePage() {
         throw error
       }
 
-      toast({
-        title: "Profil mis à jour",
-        description: "Vos informations ont été sauvegardées avec succès.",
-      })
+      toast.success("Profil mis à jour avec succès")
 
       setIsEditing(false)
       fetchUserProfile()
     } catch (error) {
       console.error('Erreur lors de la sauvegarde:', error)
-      toast({
-        title: "Erreur",
-        description: "Impossible de sauvegarder le profil.",
-        variant: "destructive",
-      })
+      toast.error("Impossible de sauvegarder le profil")
     } finally {
       setIsLoading(false)
     }

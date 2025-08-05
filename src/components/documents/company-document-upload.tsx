@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Loader2, Upload, X, File, FileText, Image, FileArchive, Plus } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
+import { DocumentType } from '@/lib/types'
 
 interface CompanyDocumentUploadProps {
   onDocumentsChange: (documents: PendingDocument[]) => void
@@ -24,13 +25,7 @@ export interface PendingDocument {
   mime_type: string
 }
 
-export type DocumentType = 
-  | 'rib' 
-  | 'kbis' 
-  | 'contrat' 
-  | 'facture' 
-  | 'devis' 
-  | 'autre'
+
 
 const DOCUMENT_TYPES: { value: DocumentType; label: string; description: string }[] = [
   { value: 'rib', label: 'RIB/IBAN', description: 'Relevé d\'identité bancaire' },
