@@ -33,7 +33,7 @@ export default function SharedCompaniesPage() {
     if (sharedCompanies.length > 0) {
       // Récupérer les SIRET pour dédupliquer
       const fetchSirets = async () => {
-        const companyIds = [...new Set(sharedCompanies.map(share => share.company_id))]
+        const companyIds = Array.from(new Set(sharedCompanies.map(share => share.company_id)))
         
         const { data: companies, error: companiesError } = await supabase
           .from('companies')

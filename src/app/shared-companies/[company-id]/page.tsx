@@ -247,7 +247,7 @@ export default function SharedCompanyPage({ params }: { params: Promise<{ 'compa
               <div className="flex-shrink-0">
                 <img
                   src={company.logo_url}
-                  alt={`Logo de ${company.company_name}`}
+                  alt={`Logo de ${company.name}`}
                   className="w-16 h-16 rounded-lg object-cover border-2 border-gray-200 shadow-sm"
                 />
               </div>
@@ -259,7 +259,7 @@ export default function SharedCompanyPage({ params }: { params: Promise<{ 'compa
               </div>
             )}
             <div>
-              <h1 className="text-3xl font-bold tracking-tight">{company.company_name}</h1>
+              <h1 className="text-3xl font-bold tracking-tight">{company.name}</h1>
               <p className="text-muted-foreground">
                 Entreprise partagée avec vous
               </p>

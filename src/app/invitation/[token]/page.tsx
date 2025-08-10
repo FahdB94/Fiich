@@ -164,39 +164,19 @@ export default function InvitationPage({ params }: { params: Promise<{ token: st
 
       console.log('✅ Utilisateur vérifié:', currentUser.email)
 
-      // 2. Créer le partage
-      const { error: shareError } = await supabase
-        .from('company_shares')
-        .insert({
-          company_id: invitation!.company_id,
-          shared_with_email: invitation!.invited_email,
-          share_token: generateShareToken(),
-          is_active: true,
-          permissions: ['view_company', 'view_documents']
-        })
+      // 2. Appeler la RPC (DB atomique)
+      const { data, error: rpcError } = await supabase.rpc('accept_invitation', {
+        p_token: token,
+        p_email: currentUser.email
+      })
 
-      if (shareError) {
-        console.error('❌ Erreur création partage:', shareError.message)
-        setError('Erreur lors de l\'acceptation: ' + shareError.message)
+      if (rpcError) {
+        console.error('❌ Erreur RPC:', rpcError.message)
+        setError('Erreur lors de l\'acceptation: ' + rpcError.message)
         return
       }
 
-      console.log('✅ Partage créé')
-
-      // 3. Supprimer l'invitation
-      const { error: deleteError } = await supabase
-        .from('invitations')
-        .delete()
-        .eq('id', invitation!.id)
-
-      if (deleteError) {
-        console.error('❌ Erreur suppression invitation:', deleteError.message)
-        // Ne pas bloquer si la suppression échoue
-      } else {
-        console.log('✅ Invitation supprimée')
-      }
-
-      console.log('✅ Invitation acceptée avec succès')
+      console.log('✅ Invitation acceptée via RPC')
       router.push(`/shared/company/${invitation!.company_id}`)
     } catch (err) {
       console.error('❌ Erreur générale:', err)
@@ -283,14 +263,7 @@ export default function InvitationPage({ params }: { params: Promise<{ token: st
 
   const handleAuthSubmit = authMode === 'signin' ? handleSignIn : handleSignUp
 
-  const generateShareToken = () => {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
-    let result = ''
-    for (let i = 0; i < 32; i++) {
-      result += chars.charAt(Math.floor(Math.random() * chars.length))
-    }
-    return result
-  }
+  // plus besoin de generateShareToken côté client
 
   const getStatusInfo = (expiresAt: string) => {
     const isExpired = new Date(expiresAt) < new Date()

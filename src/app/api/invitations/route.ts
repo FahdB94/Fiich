@@ -1,28 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServiceClient } from '@/lib/supabase'
+import { createServerClient } from '@/lib/supabase/server'
+import { rateLimit } from '@/lib/rate-limit'
+import { z } from 'zod'
 
 export async function GET(request: NextRequest) {
   try {
-    // Récupérer le token d'authentification
-    const authHeader = request.headers.get('authorization')
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { error: 'Token d\'authentification manquant' },
-        { status: 401 }
-      )
+    // Rate limit basique
+    const ip = request.headers.get('x-forwarded-for') || 'local'
+    if (!rateLimit(`invitations:GET:${ip}`, 30, 60_000)) {
+      return NextResponse.json({ error: 'Trop de requêtes' }, { status: 429 })
     }
 
-    const token = authHeader.replace('Bearer ', '')
-    const supabase = createServiceClient()
-
-    // Vérifier l'authentification
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
-    if (authError || !user) {
-      return NextResponse.json(
-        { error: 'Non authentifié' },
-        { status: 401 }
-      )
-    }
+    const supabase = await createServerClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })
 
     // Récupérer les invitations envoyées par l'utilisateur
     const { data: sentInvitations, error: sentError } = await supabase
@@ -53,12 +44,6 @@ export async function GET(request: NextRequest) {
         companies:company_id (
           id,
           company_name
-        ),
-        invited_by_user:invited_by (
-          id,
-          email,
-          first_name,
-          last_name
         )
       `)
       .eq('invited_email', user.email)
@@ -89,8 +74,7 @@ export async function GET(request: NextRequest) {
           status: inv.status,
           expires_at: inv.expires_at,
           created_at: inv.created_at,
-          company: inv.companies,
-          invited_by: inv.invited_by_user
+          company: inv.companies
         })) || []
       }
     })

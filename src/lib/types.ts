@@ -2,8 +2,7 @@
 export interface User {
   id: string
   email: string
-  first_name?: string
-  last_name?: string
+  full_name?: string
   avatar_url?: string
   created_at: string
   updated_at: string
@@ -12,28 +11,35 @@ export interface User {
 // Company types
 export interface Company {
   id: string
-  user_id: string
-  company_name: string
-  siren?: string
-  siret?: string
-  address_line_1: string
-  address_line_2?: string
-  postal_code: string
-  city: string
-  country: string
-  phone?: string
-  email: string
-  website?: string
+  name: string
   description?: string
   logo_url?: string
-  // Nouvelles informations
-  ape_code?: string
-  vat_number?: string
-  payment_terms?: string[]
-  rib?: string
-  contacts?: CompanyContact[]
+  website?: string
+  industry?: string
+  size?: string
+  address?: string
+  phone?: string
+  email: string
+  owner_id: string // Référence à users.id
+  is_public: boolean
   created_at: string
   updated_at: string
+}
+
+// Company member types
+export interface CompanyMember {
+  id: string
+  company_id: string
+  user_id: string
+  role: 'owner' | 'admin' | 'member' | 'viewer' // Correspond à l'enum user_role
+  joined_at: string
+  created_at: string
+  updated_at: string
+}
+
+// Company with user role
+export interface CompanyWithRole extends Company {
+  user_role: 'owner' | 'admin' | 'member' | 'viewer'
 }
 
 // Contact types
@@ -63,13 +69,11 @@ export interface Document {
   id: string
   company_id: string
   name: string
-  display_name?: string
+  description?: string
   file_path: string
   file_size: number
-  mime_type: string
-  document_type: DocumentType
-  document_reference?: string
-  document_version?: string
+  file_type: string // Correspond à la colonne file_type
+  uploaded_by: string // Référence à users.id
   is_public: boolean
   created_at: string
   updated_at: string
@@ -79,26 +83,70 @@ export interface Document {
 export interface CompanyShare {
   id: string
   company_id: string
-  shared_with_email: string
-  share_token: string
+  token: string // Correspond à la colonne token
+  permissions: Record<string, any> // JSONB dans la base
   expires_at?: string
-  is_active: boolean
-  permissions: SharePermission[]
+  created_by: string // Référence à users.id
   created_at: string
   updated_at: string
 }
 
-export type SharePermission = 'view_company' | 'view_documents' | 'download_documents'
+export type SharePermission = 'view' | 'edit' | 'delete'
 
 // Invitation types
 export interface Invitation {
   id: string
   company_id: string
-  invited_email: string
-  invited_by: string
-  invitation_token: string
-  status: 'pending' | 'accepted' | 'expired' | 'revoked'
+  email: string // Correspond à la colonne email
+  role: 'owner' | 'admin' | 'member' | 'viewer' // Correspond à l'enum user_role
+  token: string // Correspond à la colonne token
+  status: 'pending' | 'accepted' | 'declined' | 'expired' // Correspond à l'enum invitation_status
   expires_at: string
+  invited_by: string // Référence à users.id
+  // Champs optionnels ajoutés par les migrations
+  first_name?: string
+  last_name?: string
+  department?: string
+  created_at: string
+  updated_at: string
+}
+
+// Notification types
+export interface Notification {
+  id: string
+  user_id: string
+  type: 'invitation' | 'document_shared' | 'company_update' | 'system' // Correspond à l'enum notification_type
+  title: string
+  message: string
+  data?: Record<string, any> // JSONB dans la base
+  is_read: boolean
+  created_at: string
+  updated_at: string
+}
+
+// Plan types
+export interface Plan {
+  id: string
+  code: string // Correspond à la colonne code
+  name: string
+  description?: string
+  price_monthly?: number // Correspond à la colonne price_monthly
+  price_yearly?: number // Correspond à la colonne price_yearly
+  features: Record<string, any> // JSONB dans la base
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
+// Company subscription types
+export interface CompanySubscription {
+  id: string
+  company_id: string
+  plan_id: string
+  status: 'active' | 'canceled' | 'trialing' | 'past_due' // Correspond à l'enum subscription_status
+  started_at: string // Correspond à la colonne started_at
+  ends_at?: string // Correspond à la colonne ends_at
+  trial_ends_at?: string // Correspond à la colonne trial_ends_at
   created_at: string
   updated_at: string
 }
@@ -112,24 +160,15 @@ export interface ApiResponse<T = any> {
 
 // Form types
 export interface CompanyFormData {
-  company_name: string
-  siren?: string
-  siret?: string
-  address_line_1: string
-  address_line_2?: string
-  postal_code: string
-  city: string
-  country: string
+  name: string
+  description?: string
+  logo_url?: string
+  website?: string
+  industry?: string
+  size?: string
+  address?: string
   phone?: string
   email: string
-  website?: string
-  description?: string
-  // Nouvelles informations
-  ape_code?: string
-  vat_number?: string
-  payment_terms?: string[]
-  rib?: string
-  contacts?: CompanyContactFormData[]
 }
 
 export interface CompanyContactFormData {
@@ -142,17 +181,15 @@ export interface CompanyContactFormData {
 }
 
 export interface DocumentUploadData {
-  type: string
   name: string
+  description?: string
   file: File
   is_public: boolean
 }
 
 export interface ShareFormData {
-  email: string
-  permissions: SharePermission[]
+  permissions: Record<string, any>
   expires_at?: string
-  message?: string
 }
 
 // Database table types
@@ -174,6 +211,11 @@ export interface Database {
         Insert: Omit<CompanyContact, 'id' | 'created_at' | 'updated_at'>
         Update: Partial<Omit<CompanyContact, 'id' | 'created_at' | 'updated_at'>>
       }
+      company_members: {
+        Row: CompanyMember
+        Insert: Omit<CompanyMember, 'id' | 'created_at' | 'updated_at'>
+        Update: Partial<Omit<CompanyMember, 'id' | 'created_at' | 'updated_at'>>
+      }
       documents: {
         Row: Document
         Insert: Omit<Document, 'id' | 'created_at' | 'updated_at'>
@@ -188,6 +230,21 @@ export interface Database {
         Row: Invitation
         Insert: Omit<Invitation, 'id' | 'created_at' | 'updated_at'>
         Update: Partial<Omit<Invitation, 'id' | 'created_at' | 'updated_at'>>
+      }
+      notifications: {
+        Row: Notification
+        Insert: Omit<Notification, 'id' | 'created_at' | 'updated_at'>
+        Update: Partial<Omit<Notification, 'id' | 'created_at' | 'updated_at'>>
+      }
+      plans: {
+        Row: Plan
+        Insert: Omit<Plan, 'id' | 'created_at' | 'updated_at'>
+        Update: Partial<Omit<Plan, 'id' | 'created_at' | 'updated_at'>>
+      }
+      company_subscriptions: {
+        Row: CompanySubscription
+        Insert: Omit<CompanySubscription, 'id' | 'created_at' | 'updated_at'>
+        Update: Partial<Omit<CompanySubscription, 'id' | 'created_at' | 'updated_at'>>
       }
     }
   }

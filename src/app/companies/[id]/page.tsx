@@ -7,14 +7,16 @@ import { DocumentManager } from '@/components/documents'
 import ShareCompany from '@/components/sharing/share-company'
 import { CompanyOverview } from '@/components/company/company-overview'
 import { EnhancedDocumentManager } from '@/components/documents/enhanced-document-manager'
+import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { MembersManager } from '@/components/company/members-manager'
 import { ArrowLeft, Edit, Share, Building, Mail, Phone, Globe, MapPin, FileText, Users, Hash } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
-import Link from 'next/link'
+// duplicate import removed
 import { redirect, useParams } from 'next/navigation'
 import { useMemo, useState, useEffect } from 'react'
 
@@ -173,7 +175,7 @@ export default function CompanyDetailPage() {
                 <div className="flex-shrink-0">
                   <img
                     src={company.logo_url}
-                    alt={`Logo de ${company.company_name}`}
+                    alt={`Logo de ${company.name}`}
                     className="w-16 h-16 rounded-lg object-cover border-2 border-gray-200 shadow-sm"
                   />
                 </div>
@@ -185,7 +187,7 @@ export default function CompanyDetailPage() {
                 </div>
               )}
               <div className="space-y-2">
-                <h1 className="text-3xl font-bold tracking-tight">{company.company_name}</h1>
+                <h1 className="text-3xl font-bold tracking-tight">{company.name}</h1>
                 <div className="flex items-center gap-4 text-muted-foreground">
                   {company.siret && (
                     <div className="flex items-center gap-1">
@@ -221,7 +223,8 @@ export default function CompanyDetailPage() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-3 bg-muted/50 p-1 rounded-lg">
+          <div className="flex justify-center">
+          <TabsList className="bg-muted/50 p-1 rounded-lg">
             <TabsTrigger value="overview" className="flex items-center gap-2">
               <Building className="h-4 w-4" />
               Aperçu
@@ -234,7 +237,12 @@ export default function CompanyDetailPage() {
               <Users className="h-4 w-4" />
               Partage
             </TabsTrigger>
+            <TabsTrigger value="members" className="flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              Membres
+            </TabsTrigger>
           </TabsList>
+          </div>
           
           <TabsContent value="overview" className="space-y-6">
             <CompanyOverview 
@@ -251,7 +259,11 @@ export default function CompanyDetailPage() {
           </TabsContent>
 
           <TabsContent value="sharing" className="space-y-6">
-            <ShareCompany companyId={company?.id} companyName={company.company_name} />
+            <ShareCompany companyId={company?.id} companyName={company.name} />
+          </TabsContent>
+
+          <TabsContent value="members" className="space-y-6">
+            <MembersManager companyId={company.id} />
           </TabsContent>
         </Tabs>
       </div>

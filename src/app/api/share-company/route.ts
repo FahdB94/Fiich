@@ -1,55 +1,79 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServiceClient } from '@/lib/supabase'
+import { createServerClient } from '@/lib/supabase/server'
 import { generateInvitationToken } from '@/lib/utils/tokens'
 import nodemailer from 'nodemailer'
+import { z } from 'zod'
+import { rateLimit } from '@/lib/rate-limit'
+
+const bodySchema = z.object({
+  companyId: z.string().uuid(),
+  email: z.string().email(),
+  role: z.enum(['VIEWER','MEMBER','ADMIN']).default('VIEWER'),
+  message: z.string().max(1000).optional(),
+  firstName: z.string().max(100).optional(),
+  lastName: z.string().max(100).optional(),
+  department: z.string().max(100).optional(),
+})
 
 export async function POST(request: NextRequest) {
   console.log('📨 API share-company appelée')
   
   try {
-    // Récupérer le token d'authentification
-    const authHeader = request.headers.get('authorization')
-    console.log('🔑 Auth header:', authHeader ? 'Présent' : 'Manquant')
-    
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      console.error('❌ Token d\'authentification manquant')
-      return NextResponse.json(
-        { error: 'Token d\'authentification manquant' },
-        { status: 401 }
-      )
+    const ip = request.headers.get('x-forwarded-for') || 'local'
+    if (!rateLimit(`share-company:POST:${ip}`, 10, 60_000)) {
+      return NextResponse.json({ error: 'Trop de requêtes' }, { status: 429 })
     }
 
-    const token = authHeader.replace('Bearer ', '')
-    const supabase = createServiceClient()
-
-    // Vérifier l'authentification
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
-    console.log('👤 Authentification:', { hasUser: !!user, error: authError?.message })
+    const supabase = await createServerClient()
+    let { data: { user } } = await supabase.auth.getUser()
     
-    if (authError || !user) {
-      console.error('❌ Erreur d\'authentification:', authError)
-      return NextResponse.json(
-        { error: 'Non authentifié' },
-        { status: 401 }
-      )
+    // Fallback: Authorization: Bearer <token>
+    if (!user) {
+      const authHeader = request.headers.get('authorization')
+      if (authHeader?.startsWith('Bearer ')) {
+        const token = authHeader.slice(7)
+        try {
+          const { createClient } = await import('@supabase/supabase-js')
+          const userClient = createClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL!,
+            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+            { global: { headers: { Authorization: `Bearer ${token}` } } }
+          )
+          ;(supabase as any).__userClient = userClient
+          const { data: got } = await userClient.auth.getUser()
+          user = got.user
+        } catch (e) {
+          console.error('Erreur fallback auth:', e)
+        }
+      }
+    }
+    
+    if (!user) {
+      console.error('❌ Utilisateur non authentifié')
+      return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })
     }
 
     // Récupérer les données de la requête
-    const { companyId, email, message } = await request.json()
-    console.log('📋 Données reçues:', { companyId, email, message })
-
-    if (!companyId || !email) {
-      console.error('❌ Données manquantes:', { companyId, email })
-      return NextResponse.json(
-        { error: 'Données manquantes' },
-        { status: 400 }
-      )
+    const parsed = bodySchema.safeParse(await request.json())
+    if (!parsed.success) {
+      console.error('❌ Données invalides:', parsed.error)
+      return NextResponse.json({ error: 'Données invalides' }, { status: 400 })
     }
+    
+    const { companyId, email, message, role, firstName, lastName, department } = parsed.data
+
+    // Interdire l'auto-invitation
+    if (email.toLowerCase() === (user.email || '').toLowerCase()) {
+      return NextResponse.json({ error: 'Vous ne pouvez pas vous auto-inviter' }, { status: 400 })
+    }
+    
+    console.log('📋 Données reçues:', { companyId, email, role, firstName, lastName, department })
 
     // Vérifier que l'utilisateur possède l'entreprise
-    const { data: company, error: companyError } = await supabase
+    const db = (supabase as any).__userClient || supabase
+    const { data: company, error: companyError } = await db
       .from('companies')
-      .select('*')
+      .select('id, company_name')
       .eq('id', companyId)
       .eq('user_id', user.id)
       .single()
@@ -71,73 +95,73 @@ export async function POST(request: NextRequest) {
 
     // Générer un token d'invitation
     const invitationToken = generateInvitationToken()
+    console.log('🔑 Token généré:', invitationToken)
     
     // Créer l'invitation
-    const { data: invitation, error: invitationError } = await supabase
+    const invitationData = {
+      company_id: companyId,
+      invited_email: email,
+      invited_by: user.id,
+      invitation_token: invitationToken,
+      role_requested: role,
+      first_name: firstName || null,
+      last_name: lastName || null,
+      department: department || null,
+      expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+    }
+    
+    console.log('📝 Données invitation:', invitationData)
+    
+    const { data: invitation, error: invitationError } = await db
       .from('invitations')
-      .insert({
-        company_id: companyId,
-        invited_email: email,
-        invited_by: user.id,
-        invitation_token: invitationToken,
-        expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() // 7 jours
-      })
-      .select()
+      .insert(invitationData)
+      .select('id, invited_email, expires_at')
       .single()
 
     if (invitationError) {
-      console.error('Erreur lors de la création de l\'invitation:', invitationError)
+      console.error('❌ Erreur création invitation:', invitationError)
       return NextResponse.json(
-        { error: 'Erreur lors de la création de l\'invitation' },
+        { error: 'Erreur lors de la création de l\'invitation', details: invitationError.message },
         { status: 500 }
       )
     }
 
-    // Configuration SMTP
-    const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: parseInt(process.env.SMTP_PORT || '587'),
-      secure: false,
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS
+    console.log('✅ Invitation créée:', invitation)
+
+    // Tentative d'envoi d'email (optionnel)
+    try {
+      if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
+        const transporter = nodemailer.createTransport({
+          host: process.env.SMTP_HOST,
+          port: parseInt(process.env.SMTP_PORT || '587'),
+          secure: false,
+          auth: {
+            user: process.env.SMTP_USER,
+            pass: process.env.SMTP_PASS
+          }
+        })
+
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+        const invitationLink = `${baseUrl}/invitation/${invitation.invitation_token}`
+
+        const { buildInvitationEmailHtml, buildInvitationEmailText } = await import('@/lib/email/templates/invitation')
+        const mailOptions = {
+          from: process.env.FROM_EMAIL || 'noreply@fiich-app.com',
+          to: email,
+          subject: `Invitation à consulter ${company.company_name}`,
+          html: buildInvitationEmailHtml(company.company_name, invitationLink, message),
+          text: buildInvitationEmailText(company.company_name, invitationLink, message),
+        }
+
+        await transporter.sendMail(mailOptions)
+        console.log('📧 Email envoyé avec succès')
+      } else {
+        console.log('📧 SMTP non configuré, email non envoyé')
       }
-    })
-
-    // Construire le lien d'invitation
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
-    const invitationLink = `${baseUrl}/invitation/${invitation.invitation_token}`
-
-    // Envoyer l'email
-    const mailOptions = {
-      from: process.env.FROM_EMAIL || 'noreply@fiich-app.com',
-      to: email,
-      subject: `Invitation à consulter ${company.company_name}`,
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #333;">Invitation de partage</h2>
-          <p>Bonjour,</p>
-          <p>Vous avez été invité(e) à consulter les informations de l'entreprise <strong>${company.company_name}</strong>.</p>
-          ${message ? `<p><strong>Message de l'expéditeur :</strong><br>${message}</p>` : ''}
-          <p>Pour accepter cette invitation, cliquez sur le lien ci-dessous :</p>
-          <div style="text-align: center; margin: 30px 0;">
-            <a href="${invitationLink}" 
-               style="background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
-              Accepter l'invitation
-            </a>
-          </div>
-          <p>Ce lien expirera le ${new Date(invitation.expires_at).toLocaleDateString('fr-FR')}.</p>
-          <p>Si vous ne pouvez pas cliquer sur le bouton, copiez et collez ce lien dans votre navigateur :</p>
-          <p style="word-break: break-all; color: #666;">${invitationLink}</p>
-          <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
-          <p style="color: #666; font-size: 12px;">
-            Cet email a été envoyé automatiquement. Ne répondez pas à cet email.
-          </p>
-        </div>
-      `
+    } catch (emailError) {
+      console.log('⚠️ Erreur email (non bloquant):', emailError)
+      // L'erreur d'email ne doit pas faire échouer l'invitation
     }
-
-    await transporter.sendMail(mailOptions)
 
     return NextResponse.json({
       success: true,
@@ -150,9 +174,9 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Erreur lors du partage:', error)
+    console.error('💥 Erreur générale:', error)
     return NextResponse.json(
-      { error: 'Erreur interne du serveur' },
+      { error: 'Erreur interne du serveur', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     )
   }

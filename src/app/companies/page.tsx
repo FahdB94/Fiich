@@ -436,7 +436,7 @@ export default function CompaniesPage() {
                           <div className="flex-shrink-0">
                             <img
                               src={company.logo_url}
-                              alt={`Logo de ${company.company_name}`}
+                              alt={`Logo de ${company.name}`}
                               className="w-12 h-12 rounded-lg object-cover border-2 border-gray-200 group-hover:border-blue-300 transition-colors"
                               onError={(e) => console.error('❌ Erreur chargement logo:', company.logo_url)}
                               onLoad={() => console.log('✅ Logo chargé:', company.logo_url)}
@@ -449,7 +449,7 @@ export default function CompaniesPage() {
                         )}
                         <div className="flex-1 min-w-0">
                           <CardTitle className="text-lg font-semibold line-clamp-1 group-hover:text-blue-600 transition-colors mb-2">
-                            {company.company_name}
+                            {company.name}
                           </CardTitle>
                           <div className="flex items-start gap-2 text-sm text-muted-foreground">
                             <MapPin className="h-3 w-3 flex-shrink-0 mt-0.5" />

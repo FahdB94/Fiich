@@ -1,9 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { createBrowserClient } from '@supabase/ssr'
 
-// Force dynamic rendering to avoid build-time Supabase access
 export const dynamic = 'force-dynamic'
 import { MainLayout } from '@/components/layout/main-layout'
 import { Button } from '@/components/ui/button'
@@ -14,95 +12,47 @@ import { Building, Mail, CheckCircle, XCircle, Clock, ExternalLink } from 'lucid
 import Link from 'next/link'
 import { useAuth } from '@/hooks/use-auth'
 
-interface Invitation {
+type ApiInvitation = {
   id: string
-  company_id: string
-  invited_email: string
-  invited_by: string
+  invitation_token?: string
   status: 'pending' | 'accepted' | 'expired' | 'revoked'
   expires_at: string
   created_at: string
-  company: {
-    company_name: string
-    email: string
-  }
-  inviter: {
-    email: string
-    first_name?: string
-    last_name?: string
-  }
+  company?: { id?: string; company_name?: string }
 }
 
 export default function InvitationsPage() {
-  const [invitations, setInvitations] = useState<Invitation[]>([])
+  const [invitations, setInvitations] = useState<ApiInvitation[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const { user } = useAuth()
-  
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
 
   useEffect(() => {
     const fetchInvitations = async () => {
       if (!user) return
-
       try {
         setLoading(true)
         setError(null)
-
-        // Récupérer les invitations reçues par email
-        const { data, error } = await supabase
-          .from('invitations')
-          .select(`
-            *,
-            company:companies(company_name, email),
-            inviter:users!invitations_invited_by_fkey(email, first_name, last_name)
-          `)
-          .eq('invited_email', user.email)
-          .order('created_at', { ascending: false })
-
-        if (error) {
-          throw error
-        }
-
-        setInvitations(data || [])
+        const res = await fetch('/api/invitations')
+        if (!res.ok) throw new Error('Erreur API invitations')
+        const json = await res.json()
+        const received: ApiInvitation[] = json?.data?.received || []
+        setInvitations(received)
       } catch (err: any) {
         setError(err.message || 'Erreur lors du chargement des invitations')
       } finally {
         setLoading(false)
       }
     }
-
     fetchInvitations()
-  }, [user, supabase])
+  }, [user])
 
   const acceptInvitation = async (invitationId: string) => {
     try {
-      const { error } = await supabase
-        .from('invitations')
-        .update({ status: 'accepted' })
-        .eq('id', invitationId)
-
-      if (error) {
-        throw error
-      }
-
-      // Mettre à jour l'état local
-      setInvitations(prev => 
-        prev.map(inv => 
-          inv.id === invitationId 
-            ? { ...inv, status: 'accepted' as const }
-            : inv
-        )
-      )
-
-      // Rediriger vers l'entreprise partagée
-      const invitation = invitations.find(inv => inv.id === invitationId)
-      if (invitation) {
-        window.location.href = `/shared/company/${invitation.company_id}`
-      }
+      // délégué au flux /invitation/[token] si disponible
+      const inv = invitations.find(i => i.id === invitationId)
+      if (!inv?.invitation_token) return
+      window.location.href = `/invitation/${inv.invitation_token}`
     } catch (err: any) {
       setError(err.message || 'Erreur lors de l\'acceptation')
     }
@@ -110,23 +60,8 @@ export default function InvitationsPage() {
 
   const rejectInvitation = async (invitationId: string) => {
     try {
-      const { error } = await supabase
-        .from('invitations')
-        .update({ status: 'revoked' })
-        .eq('id', invitationId)
-
-      if (error) {
-        throw error
-      }
-
-      // Mettre à jour l'état local
-      setInvitations(prev => 
-        prev.map(inv => 
-          inv.id === invitationId 
-            ? { ...inv, status: 'revoked' as const }
-            : inv
-        )
-      )
+      // simple mise à jour locale (l'API aura un endpoint dédié plus tard)
+      setInvitations(prev => prev.map(inv => inv.id === invitationId ? { ...inv, status: 'revoked' } : inv))
     } catch (err: any) {
       setError(err.message || 'Erreur lors du refus')
     }
@@ -153,7 +88,7 @@ export default function InvitationsPage() {
     }
   }
 
-  const canAccept = (invitation: Invitation) => {
+  const canAccept = (invitation: ApiInvitation) => {
     return invitation.status === 'pending' && new Date(invitation.expires_at) > new Date()
   }
 
@@ -218,12 +153,10 @@ export default function InvitationsPage() {
                       <div>
                         <CardTitle className="flex items-center gap-2">
                           <Building className="h-5 w-5" />
-                          {invitation.company.company_name}
+                          {invitation.company?.company_name || 'Entreprise'}
                         </CardTitle>
                         <CardDescription>
-                          Invitation de {invitation.inviter.first_name && invitation.inviter.last_name
-                            ? `${invitation.inviter.first_name} ${invitation.inviter.last_name}`
-                            : invitation.inviter.email}
+                          Invitation reçue
                         </CardDescription>
                       </div>
                       {getStatusBadge(invitation.status, invitation.expires_at)}
@@ -234,7 +167,7 @@ export default function InvitationsPage() {
                       <div className="grid grid-cols-2 gap-4 text-sm">
                         <div>
                           <span className="font-medium">Entreprise :</span>
-                          <p className="text-muted-foreground">{invitation.company.company_name}</p>
+                          <p className="text-muted-foreground">{invitation.company?.company_name || '—'}</p>
                         </div>
                         <div>
                           <span className="font-medium">Expire le :</span>
@@ -266,7 +199,7 @@ export default function InvitationsPage() {
                       {invitation.status === 'accepted' && (
                         <div className="flex gap-2">
                           <Button asChild className="flex-1">
-                            <Link href={`/shared/company/${invitation.company_id}`}>
+                            <Link href={`/shared/company/${invitation.company?.id || ''}`}>
                               <ExternalLink className="h-4 w-4 mr-2" />
                               Voir l'entreprise
                             </Link>

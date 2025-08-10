@@ -1,32 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServiceClient } from '@/lib/supabase'
+import { createServerClient } from '@/lib/supabase/server'
 import { generateShareToken } from '@/lib/utils/tokens'
+import { z } from 'zod'
+import { rateLimit } from '@/lib/rate-limit'
+
+const bodySchema = z.object({ companyId: z.string().uuid() })
 
 export async function POST(request: NextRequest) {
   try {
-    // Récupérer le token d'authentification
-    const authHeader = request.headers.get('authorization')
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { error: 'Token d\'authentification manquant' },
-        { status: 401 }
-      )
+    const ip = request.headers.get('x-forwarded-for') || 'local'
+    if (!rateLimit(`share:POST:${ip}`, 10, 60_000)) {
+      return NextResponse.json({ error: 'Trop de requêtes' }, { status: 429 })
     }
 
-    const token = authHeader.replace('Bearer ', '')
-    const supabase = createServiceClient()
-
-    // Vérifier l'authentification
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
-    if (authError || !user) {
-      return NextResponse.json(
-        { error: 'Non authentifié' },
-        { status: 401 }
-      )
-    }
+    const supabase = await createServerClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })
 
     // Récupérer les données de la requête
-    const { companyId } = await request.json()
+    const parsed = bodySchema.safeParse(await request.json())
+    if (!parsed.success) return NextResponse.json({ error: 'Paramètres invalides' }, { status: 400 })
+    const { companyId } = parsed.data
 
     if (!companyId) {
       return NextResponse.json(

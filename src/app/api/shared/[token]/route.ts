@@ -1,11 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServiceClient } from '@/lib/supabase'
+import { createServerClient } from '@/lib/supabase/server'
+import { rateLimit } from '@/lib/rate-limit'
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ token: string }> }
 ) {
   try {
+    const ip = request.headers.get('x-forwarded-for') || 'local'
+    if (!rateLimit(`shared:GET:${ip}`, 60, 60_000)) {
+      return NextResponse.json({ error: 'Trop de requêtes' }, { status: 429 })
+    }
     const { token: shareToken } = await params
 
     if (!shareToken) {
@@ -15,7 +20,7 @@ export async function GET(
       )
     }
 
-    const supabase = createServiceClient()
+    const supabase = await createServerClient()
 
     // Utiliser la fonction SQL pour récupérer l'entreprise partagée
     const { data: sharedData, error: shareError } = await supabase

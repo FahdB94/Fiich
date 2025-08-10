@@ -54,14 +54,18 @@ export function CompanyOverview({
   }
 
   const formatAddress = () => {
-    const parts = [
-      company.address_line_1,
-      company.address_line_2,
-      company.postal_code,
-      company.city,
-      company.country
-    ].filter(Boolean)
-    return parts.length > 0 ? parts.join(', ') : "Adresse non renseignée"
+    if (!company.address) return "Adresse non renseignée"
+    return company.address
+  }
+
+  const formatIndustry = () => {
+    if (!company.industry) return "Secteur non renseigné"
+    return company.industry
+  }
+
+  const formatSize = () => {
+    if (!company.size) return "Taille non renseignée"
+    return company.size
   }
 
   const formatRIB = (rib?: string) => {
@@ -88,7 +92,7 @@ export function CompanyOverview({
         </div>
         <div>
           <h2 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-            {company.company_name}
+            {company.name}
           </h2>
           <p className="text-muted-foreground mt-2">
             Fiche complète de l'entreprise

@@ -20,7 +20,7 @@ export function useCompanies(userId?: string) {
       const { data, error } = await supabase
         .from('companies')
         .select('*')
-        .eq('user_id', userId)
+        .eq('owner_id', userId)
         .order('created_at', { ascending: false })
 
       if (error) throw error
@@ -45,7 +45,7 @@ export function useCompanies(userId?: string) {
         .from('companies')
         .insert({
           ...companyData,
-          user_id: userId,
+          owner_id: userId,
         })
         .select()
         .single()
@@ -65,7 +65,7 @@ export function useCompanies(userId?: string) {
         .from('companies')
         .update(companyData)
         .eq('id', companyId)
-        .eq('user_id', userId)
+        .eq('owner_id', userId)
         .select()
         .single()
 
@@ -88,7 +88,7 @@ export function useCompanies(userId?: string) {
         .from('companies')
         .delete()
         .eq('id', companyId)
-        .eq('user_id', userId)
+        .eq('owner_id', userId)
 
       if (error) throw error
 

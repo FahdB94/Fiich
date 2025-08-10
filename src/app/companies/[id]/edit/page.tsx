@@ -83,7 +83,7 @@ export default function EditCompanyPage() {
             <Building2 className="mx-auto h-12 w-12 text-primary mb-4" />
             <h1 className="text-3xl font-bold mb-2">Modifier l'entreprise</h1>
             <p className="text-muted-foreground">
-              Modifiez les informations de <strong>{company.company_name}</strong>
+              Modifiez les informations de <strong>{company.name}</strong>
             </p>
           </div>
 

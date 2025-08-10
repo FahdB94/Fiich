@@ -1,212 +1,195 @@
-# Fiich - Professional Business Identity Sharing Platform
+# 🚀 Fiich - Plateforme de Gestion d'Entreprises
 
-Fiich est une application web moderne permettant aux entreprises de créer, stocker et partager leur fiche d'identité entreprise avec leurs partenaires de manière sécurisée.
+## 📋 Description
 
-## 🚀 Fonctionnalités
+Fiich est une plateforme moderne de gestion d'entreprises avec partage de documents, construite avec Next.js 15, TypeScript et Supabase. L'application permet aux utilisateurs de créer et gérer des entreprises, partager des documents de manière sécurisée, et collaborer avec des membres d'équipe.
 
-- **Gestion d'entreprise complète** : Création et édition de fiches d'identité avec informations légales
-- **Stockage sécurisé** : Hébergement de documents (RIB, Kbis, CGV) avec contrôle d'accès
-- **Partage intelligent** : Liens sécurisés avec permissions granulaires
-- **Authentification robuste** : Système d'auth avec Supabase
-- **Interface moderne** : UI responsive avec ShadCN/UI et Tailwind CSS
-- **Multilingue** : Support français/anglais
+## ✨ Fonctionnalités Principales
 
-## 🛠️ Technologies
+- 🔐 **Authentification sécurisée** avec Supabase Auth
+- 🏢 **Gestion d'entreprises** complète
+- 👥 **Gestion des membres** et permissions
+- 📄 **Partage de documents** sécurisé
+- 📧 **Système d'invitations** par email
+- 🔔 **Notifications en temps réel**
+- 📱 **Interface responsive** et moderne
+- 🛡️ **Sécurité RLS** (Row Level Security)
 
-- **Frontend** : Next.js 14, TypeScript, Tailwind CSS, ShadCN/UI
-- **Backend** : Supabase (Auth + Database + Storage)
-- **Authentification** : Supabase Auth avec JWT
-- **Base de données** : PostgreSQL avec RLS
-- **Stockage** : Supabase Storage
-- **Validation** : Zod avec React Hook Form
-- **UI Components** : ShadCN/UI + Radix UI
-- **Icons** : Lucide React
+## 🏗️ Architecture Technique
 
-## 🎯 Installation et Configuration
+### Frontend
+- **Framework**: Next.js 15 avec App Router
+- **Language**: TypeScript strict
+- **Styling**: Tailwind CSS + shadcn/ui
+- **State Management**: React Hooks + Context API
+
+### Backend
+- **Base de données**: Supabase (PostgreSQL)
+- **Authentification**: Supabase Auth
+- **Storage**: Supabase Storage
+- **API**: Next.js API Routes
+
+### Sécurité
+- **RLS**: Row Level Security activé
+- **Politiques de sécurité**: Granulaires et basées sur les rôles
+- **Validation**: TypeScript + Zod pour la validation des données
+
+## 🚀 Installation et Configuration
 
 ### Prérequis
-
-- Node.js 18+
+- Node.js 18+ 
 - npm ou yarn
 - Compte Supabase
 
-### 1. Installation
-
-\`\`\`bash
-# Cloner le projet
-git clone <repo-url>
+### 1. Cloner le projet
+```bash
+git clone <repository-url>
 cd fiich-app
+```
 
-# Installer les dépendances
+### 2. Installer les dépendances
+```bash
 npm install
-\`\`\`
+```
 
-### 2. Configuration Supabase
+### 3. Configuration de l'environnement
+```bash
+cp env.local.example .env.local
+```
 
-1. Créez un nouveau projet sur [Supabase](https://supabase.com)
+Remplir les variables dans `.env.local` :
+```env
+# Supabase
+NEXT_PUBLIC_SUPABASE_URL=your-supabase-url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 
-2. Exécutez le script SQL de création de base de données :
-   - Allez dans l'onglet SQL Editor de votre projet Supabase
-   - Copiez et exécutez le contenu du fichier \`supabase-schema.sql\`
-
-3. Configurez le stockage :
-   - Allez dans Storage > Buckets
-   - Créez un bucket nommé \`company-files\`
-   - Définissez-le comme privé (non public)
-
-4. Récupérez vos clés API :
-   - Project URL
-   - Anon key
-   - Service role key (pour les opérations admin)
-
-### 3. Variables d'environnement
-
-Créez un fichier \`.env.local\` à la racine du projet :
-
-\`\`\`env
-# Supabase Configuration
-NEXT_PUBLIC_SUPABASE_URL=votre_url_supabase
-NEXT_PUBLIC_SUPABASE_ANON_KEY=votre_cle_anon_supabase
-SUPABASE_SERVICE_ROLE_KEY=votre_cle_service_role
-
-# App Configuration
+# Application
 NEXT_PUBLIC_APP_URL=http://localhost:3000
-NEXTAUTH_SECRET=votre_secret_aleatoire
+NEXTAUTH_SECRET=your-secret
 
-# Email Configuration (optionnel)
-RESEND_API_KEY=votre_cle_resend
-FROM_EMAIL=noreply@votredomaine.com
-\`\`\`
+# Email (Gmail SMTP)
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your-email@gmail.com
+SMTP_PASS=your-app-password
+FROM_EMAIL="Fiich <your-email@gmail.com>"
+```
 
-### 4. Lancement en développement
+### 4. Configuration de la base de données
+```bash
+# Créer le schéma propre
+npm run db:create-schema
 
-\`\`\`bash
+# Activer RLS
+npm run db:activate-rls
+```
+
+### 5. Lancer l'application
+```bash
 npm run dev
-\`\`\`
+```
 
 L'application sera disponible sur [http://localhost:3000](http://localhost:3000)
 
-## 📁 Structure du projet
+## 🗄️ Structure de la Base de Données
 
-\`\`\`
+### Tables Principales
+- **users**: Utilisateurs de l'application
+- **companies**: Entreprises créées
+- **company_members**: Membres des entreprises
+- **company_shares**: Partages d'entreprises
+- **documents**: Documents stockés
+- **invitations**: Invitations envoyées
+- **notifications**: Notifications système
+
+### Sécurité RLS
+Toutes les tables ont RLS activé avec des politiques de sécurité appropriées :
+- Accès basé sur l'authentification
+- Permissions granulaires selon les rôles
+- Isolation des données entre entreprises
+
+## 📁 Structure du Projet
+
+```
 src/
-├── app/                    # App Router (Next.js 14)
+├── app/                    # Pages Next.js (App Router)
+│   ├── api/               # API Routes
 │   ├── auth/              # Pages d'authentification
 │   ├── companies/         # Gestion des entreprises
 │   ├── dashboard/         # Tableau de bord
-│   └── share/             # Pages de partage public
-├── components/            # Composants réutilisables
+│   └── shared/            # Pages de partage
+├── components/             # Composants React
 │   ├── auth/              # Composants d'authentification
-│   ├── company/           # Composants entreprise
-│   ├── documents/         # Gestion des documents
-│   ├── forms/             # Formulaires
-│   ├── layout/            # Layout et navigation
-│   ├── sharing/           # Composants de partage
-│   └── ui/                # Composants UI (ShadCN)
-├── hooks/                 # Hooks personnalisés
-├── lib/                   # Utilitaires et configuration
-│   ├── config.ts          # Configuration app
-│   ├── supabase.ts        # Client Supabase
-│   ├── types.ts           # Types TypeScript
-│   ├── validations.ts     # Schémas Zod
-│   └── utils.ts           # Fonctions utilitaires
-└── styles/                # Styles globaux
-\`\`\`
+│   ├── company/            # Composants d'entreprise
+│   ├── documents/          # Composants de documents
+│   ├── layout/             # Composants de mise en page
+│   └── ui/                 # Composants UI (shadcn/ui)
+├── hooks/                  # Hooks React personnalisés
+├── lib/                    # Utilitaires et configuration
+│   ├── supabase/           # Configuration Supabase
+│   ├── email/              # Configuration email
+│   └── utils/              # Fonctions utilitaires
+└── types/                  # Types TypeScript
+```
 
-## 🔐 Sécurité
+## 🧪 Tests
 
-### Row Level Security (RLS)
+```bash
+# Tests unitaires
+npm test
 
-Toutes les tables utilisent RLS pour garantir que :
-- Les utilisateurs ne peuvent accéder qu'à leurs propres données
-- Les partages sont sécurisés avec des tokens uniques
-- Les permissions sont respectées lors de l'accès aux documents
+# Tests en mode watch
+npm run test:watch
 
-### Authentification
+# Tests avec couverture
+npm run test:coverage
+```
 
-- JWT tokens via Supabase Auth
-- Validation côté client et serveur
-- Sessions sécurisées avec refresh automatique
+## 🚀 Déploiement
 
-### Stockage
-
-- Fichiers stockés dans Supabase Storage avec accès contrôlé
-- URLs signées pour l'accès temporaire aux documents
-- Validation des types de fichiers et tailles
-
-## 🌐 Déploiement
-
-### Vercel (Recommandé)
-
-1. Connectez votre repository GitHub à Vercel
-2. Configurez les variables d'environnement dans Vercel
-3. Déployez automatiquement
+### Build de production
+```bash
+npm run build
+```
 
 ### Variables d'environnement de production
+Assurez-vous de configurer les variables d'environnement appropriées sur votre plateforme de déploiement.
 
-\`\`\`env
-NEXT_PUBLIC_SUPABASE_URL=votre_url_supabase_prod
-NEXT_PUBLIC_SUPABASE_ANON_KEY=votre_cle_anon_prod
-SUPABASE_SERVICE_ROLE_KEY=votre_cle_service_role_prod
-NEXT_PUBLIC_APP_URL=https://votredomaine.com
-NEXTAUTH_SECRET=secret_production_fort
-\`\`\`
+## 🔧 Scripts Disponibles
 
-## 📝 Utilisation
+```bash
+# Développement
+npm run dev              # Serveur de développement
+npm run build            # Build de production
+npm run start            # Serveur de production
+npm run lint             # Vérification du code
+npm run type-check       # Vérification des types
 
-### Pour les administrateurs d'entreprise
+# Base de données
+npm run db:create-schema # Créer le schéma
+npm run db:activate-rls  # Activer RLS
+npm run db:cleanup       # Nettoyer la base
+```
 
-1. **Inscription/Connexion** : Créez votre compte ou connectez-vous
-2. **Créer une entreprise** : Remplissez le formulaire avec vos informations
-3. **Ajouter des documents** : Téléversez RIB, Kbis, CGV, etc.
-4. **Partager** : Générez des liens sécurisés pour vos partenaires
-5. **Gérer les accès** : Contrôlez qui peut voir quoi et pour combien de temps
-
-### Pour les partenaires invités
-
-1. **Réception d'invitation** : Recevez un lien sécurisé par email
-2. **Accès à la fiche** : Consultez les informations partagées
-3. **Téléchargement** : Accédez aux documents selon vos permissions
-
-## 🔧 Développement
-
-### Scripts disponibles
-
-\`\`\`bash
-npm run dev          # Développement
-npm run build        # Build de production
-npm run start        # Serveur de production
-npm run lint         # Linting
-npm run type-check   # Vérification TypeScript
-\`\`\`
-
-### Contribution
+## 🤝 Contribution
 
 1. Fork le projet
-2. Créez une branche feature (\`git checkout -b feature/AmazingFeature\`)
-3. Committez vos changements (\`git commit -m 'Add some AmazingFeature'\`)
-4. Push sur la branche (\`git push origin feature/AmazingFeature\`)
-5. Ouvrez une Pull Request
+2. Créer une branche feature (`git checkout -b feature/AmazingFeature`)
+3. Commit les changements (`git commit -m 'Add some AmazingFeature'`)
+4. Push vers la branche (`git push origin feature/AmazingFeature`)
+5. Ouvrir une Pull Request
 
 ## 📄 Licence
 
-Ce projet est sous licence MIT. Voir le fichier \`LICENSE\` pour plus de détails.
+Ce projet est sous licence MIT. Voir le fichier `LICENSE` pour plus de détails.
 
 ## 🆘 Support
 
 Pour toute question ou problème :
-- Ouvrez une issue GitHub
-- Contactez l'équipe via [contact@fiich.com](mailto:contact@fiich.com)
-
-## 🚀 Roadmap
-
-- [ ] Notifications temps réel
-- [ ] API REST publique
-- [ ] Intégrations tierces (CRM, etc.)
-- [ ] Analytics et rapports
-- [ ] App mobile
-- [ ] SSO Enterprise
+- Créer une issue sur GitHub
+- Contacter l'équipe de développement
 
 ---
 
-Développé avec ❤️ par l'équipe Fiich
+**🎉 Merci d'utiliser Fiich !**

@@ -38,11 +38,18 @@ export function useCompanyDocuments() {
 
     for (const document of documents) {
       try {
-        // Générer un nom de fichier unique
+        // Valider le type MIME (pdf/jpg/jpeg/png uniquement)
+        const allowed = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png']
+        if (!allowed.includes(document.mime_type)) {
+          throw new Error('Type de fichier non autorisé')
+        }
+
+        // Générer un nom de fichier unique (sans espaces)
         const timestamp = Date.now()
-        const fileExtension = document.name.split('.').pop()
-        const fileName = `${timestamp}-${document.name}`
-        const filePath = `companies/${companyId}/${document.type}/${fileName}`
+        const sanitizedName = document.name.replace(/\s+/g, '_')
+        const fileName = `${timestamp}-${sanitizedName}`
+        // Nouveau schéma: {company_id}/{category}/{uuid-filename.ext}
+        const filePath = `${companyId}/${document.type}/${fileName}`
 
         // Upload vers Supabase Storage
         const { data: uploadData, error: uploadError } = await supabase.storage

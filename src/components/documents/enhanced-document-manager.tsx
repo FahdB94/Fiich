@@ -40,6 +40,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 
 interface EnhancedDocumentManagerProps {
   companyId: string
+  userRole?: string
 }
 
 export function EnhancedDocumentManager({ companyId }: EnhancedDocumentManagerProps) {

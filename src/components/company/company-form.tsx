@@ -21,12 +21,9 @@ import { Textarea } from '@/components/ui/textarea'
 import { useAuth } from '@/hooks/use-auth'
 import { useCompanies } from '@/hooks/use-companies'
 import { companySchema, CompanyFormData } from '@/lib/validations'
-import { Company, CompanyContactFormData } from '@/lib/types'
+import { Company } from '@/lib/types'
 import { Loader2 } from 'lucide-react'
 import { CompanyDocumentUpload, PendingDocument } from '@/components/documents/company-document-upload'
-import { PaymentTermsInput } from '@/components/company/payment-terms-input'
-import { ContactsSection } from '@/components/company/contacts-section'
-import { RIBInput } from '@/components/company/rib-input'
 import { LogoUpload } from '@/components/company/logo-upload'
 import { SuccessModal } from '@/components/ui/success-modal'
 import { useCompanyDocuments } from '@/hooks/use-company-documents'
@@ -40,9 +37,6 @@ export function CompanyForm({ company, mode }: CompanyFormProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [pendingDocuments, setPendingDocuments] = useState<PendingDocument[]>([])
   const [selectedLogo, setSelectedLogo] = useState<File | null>(null)
-  const [paymentTerms, setPaymentTerms] = useState<string[]>(company?.payment_terms || [])
-  const [contacts, setContacts] = useState<CompanyContactFormData[]>([])
-  const [rib, setRib] = useState(company?.rib || '')
   const [showSuccessModal, setShowSuccessModal] = useState(false)
   const [successMessage, setSuccessMessage] = useState('')
   const { uploadCompanyDocuments } = useCompanyDocuments()
@@ -58,22 +52,17 @@ export function CompanyForm({ company, mode }: CompanyFormProps) {
   } = useForm<CompanyFormData>({
     resolver: zodResolver(companySchema),
     defaultValues: company ? {
-      company_name: company.company_name,
-      siren: company.siren || '',
-      siret: company.siret || '',
-      address_line_1: company.address_line_1,
-      address_line_2: company.address_line_2 || '',
-      postal_code: company.postal_code,
-      city: company.city,
-      country: company.country,
+      name: company.name,
+      description: company.description || '',
+      logo_url: company.logo_url || '',
+      website: company.website || '',
+      industry: company.industry || '',
+      size: company.size || '',
+      address: company.address || '',
       phone: company.phone || '',
       email: company.email,
-      website: company.website || '',
-      description: company.description || '',
-      ape_code: company.ape_code || '',
-      vat_number: company.vat_number || '',
     } : {
-      country: 'France',
+      email: user?.email || '',
     },
   })
 
@@ -81,12 +70,11 @@ export function CompanyForm({ company, mode }: CompanyFormProps) {
     setIsLoading(true)
 
     try {
-      // Ajouter les nouvelles données au formulaire
+      // Préparer les données pour l'API
       const enrichedData = {
         ...data,
-        payment_terms: paymentTerms.length > 0 ? paymentTerms : undefined,
-        contacts: contacts.length > 0 ? contacts : undefined,
-        rib: rib || undefined,
+        owner_id: user?.id, // Ajouter l'ID de l'utilisateur connecté
+        is_public: false, // Par défaut, l'entreprise n'est pas publique
       }
 
       let result
@@ -212,15 +200,15 @@ export function CompanyForm({ company, mode }: CompanyFormProps) {
             <h3 className="text-lg font-medium">Informations générales</h3>
             
             <div className="space-y-2">
-              <Label htmlFor="company_name">Raison sociale *</Label>
+              <Label htmlFor="name">Nom de l'entreprise *</Label>
               <Input
-                id="company_name"
+                id="name"
                 placeholder="Nom de votre entreprise"
-                {...register('company_name')}
+                {...register('name')}
                 disabled={isLoading}
               />
-              {errors.company_name && (
-                <p className="text-sm text-destructive">{errors.company_name.message}</p>
+              {errors.name && (
+                <p className="text-sm text-destructive">{errors.name.message}</p>
               )}
             </div>
 
@@ -232,114 +220,71 @@ export function CompanyForm({ company, mode }: CompanyFormProps) {
               disabled={isLoading}
             />
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="siren">SIREN</Label>
-                <Input
-                  id="siren"
-                  placeholder="123456789"
-                  {...register('siren')}
-                  disabled={isLoading}
-                />
-                {errors.siren && (
-                  <p className="text-sm text-destructive">{errors.siren.message}</p>
-                )}
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="siret">SIRET</Label>
-                <Input
-                  id="siret"
-                  placeholder="12345678901234"
-                  {...register('siret')}
-                  disabled={isLoading}
-                />
-                {errors.siret && (
-                  <p className="text-sm text-destructive">{errors.siret.message}</p>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Adresse */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-medium">Adresse</h3>
-            
             <div className="space-y-2">
-              <Label htmlFor="address_line_1">Adresse *</Label>
-              <Input
-                id="address_line_1"
-                placeholder="123 Rue de la Paix"
-                {...register('address_line_1')}
+              <Label htmlFor="description">Description</Label>
+              <Textarea
+                id="description"
+                placeholder="Description de votre entreprise"
+                {...register('description')}
                 disabled={isLoading}
               />
-              {errors.address_line_1 && (
-                <p className="text-sm text-destructive">{errors.address_line_1.message}</p>
+              {errors.description && (
+                <p className="text-sm text-destructive">{errors.description.message}</p>
               )}
             </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="address_line_2">Complément d'adresse</Label>
-              <Input
-                id="address_line_2"
-                placeholder="Appartement, suite, etc."
-                {...register('address_line_2')}
-                disabled={isLoading}
-              />
-            </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="postal_code">Code postal *</Label>
+                <Label htmlFor="industry">Secteur d'activité</Label>
                 <Input
-                  id="postal_code"
-                  placeholder="75001"
-                  {...register('postal_code')}
+                  id="industry"
+                  placeholder="Ex: Technologie, Commerce, Services..."
+                  {...register('industry')}
                   disabled={isLoading}
                 />
-                {errors.postal_code && (
-                  <p className="text-sm text-destructive">{errors.postal_code.message}</p>
+                {errors.industry && (
+                  <p className="text-sm text-destructive">{errors.industry.message}</p>
                 )}
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="city">Ville *</Label>
+                <Label htmlFor="size">Taille de l'entreprise</Label>
                 <Input
-                  id="city"
-                  placeholder="Paris"
-                  {...register('city')}
+                  id="size"
+                  placeholder="Ex: 1-10, 11-50, 51-200..."
+                  {...register('size')}
                   disabled={isLoading}
                 />
-                {errors.city && (
-                  <p className="text-sm text-destructive">{errors.city.message}</p>
-                )}
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="country">Pays *</Label>
-                <Input
-                  id="country"
-                  placeholder="France"
-                  {...register('country')}
-                  disabled={isLoading}
-                />
-                {errors.country && (
-                  <p className="text-sm text-destructive">{errors.country.message}</p>
+                {errors.size && (
+                  <p className="text-sm text-destructive">{errors.size.message}</p>
                 )}
               </div>
             </div>
           </div>
 
-          {/* Contact */}
+          {/* Contact et localisation */}
           <div className="space-y-4">
-            <h3 className="text-lg font-medium">Contact</h3>
+            <h3 className="text-lg font-medium">Contact et localisation</h3>
             
+            <div className="space-y-2">
+              <Label htmlFor="address">Adresse</Label>
+              <Input
+                id="address"
+                placeholder="123 Rue de la Paix, 75001 Paris"
+                {...register('address')}
+                disabled={isLoading}
+              />
+              {errors.address && (
+                <p className="text-sm text-destructive">{errors.address.message}</p>
+              )}
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="phone">Téléphone</Label>
                 <Input
                   id="phone"
-                  placeholder="01 23 45 67 89"
+                  placeholder="+33 1 23 45 67 89"
                   {...register('phone')}
                   disabled={isLoading}
                 />
@@ -362,11 +307,12 @@ export function CompanyForm({ company, mode }: CompanyFormProps) {
                 )}
               </div>
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="website">Site web</Label>
               <Input
                 id="website"
+                type="url"
                 placeholder="https://www.entreprise.com"
                 {...register('website')}
                 disabled={isLoading}
@@ -377,84 +323,11 @@ export function CompanyForm({ company, mode }: CompanyFormProps) {
             </div>
           </div>
 
-          {/* Informations légales et financières */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-medium">Informations légales et financières</h3>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="ape_code">Code APE</Label>
-                <Input
-                  id="ape_code"
-                  placeholder="6201A"
-                  {...register('ape_code')}
-                  disabled={isLoading}
-                />
-                {errors.ape_code && (
-                  <p className="text-sm text-destructive">{errors.ape_code.message}</p>
-                )}
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="vat_number">TVA intracommunautaire</Label>
-                <Input
-                  id="vat_number"
-                  placeholder="FR12345678901"
-                  {...register('vat_number')}
-                  disabled={isLoading}
-                />
-                {errors.vat_number && (
-                  <p className="text-sm text-destructive">{errors.vat_number.message}</p>
-                )}
-              </div>
-            </div>
-
-            <RIBInput
-              value={rib}
-              onChange={setRib}
-              error={errors.rib?.message}
-              disabled={isLoading}
-            />
-
-            <PaymentTermsInput
-              value={paymentTerms}
-              onChange={setPaymentTerms}
-              disabled={isLoading}
-            />
-          </div>
-
-          {/* Contacts */}
-          <div className="space-y-4">
-            <ContactsSection
-              contacts={contacts}
-              onChange={setContacts}
-              disabled={isLoading}
-            />
-          </div>
-
-          {/* Description */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-medium">Description</h3>
-            
-            <div className="space-y-2">
-              <Label htmlFor="description">Description de l'entreprise</Label>
-              <Textarea
-                id="description"
-                placeholder="Décrivez votre entreprise, ses activités, ses valeurs..."
-                rows={4}
-                {...register('description')}
-                disabled={isLoading}
-              />
-              {errors.description && (
-                <p className="text-sm text-destructive">{errors.description.message}</p>
-              )}
-            </div>
-          </div>
-
           {/* Documents */}
           <div className="space-y-4">
             <h3 className="text-lg font-medium">Documents</h3>
             <CompanyDocumentUpload
+              companyId={company?.id}
               onDocumentsChange={handleDocumentsChange}
               disabled={isLoading}
             />

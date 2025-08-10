@@ -1,0 +1,171 @@
+# 🚀 Configuration Cursor pour l'Application Fiich
+
+## 🎯 Objectif
+Cette application est une plateforme de gestion d'entreprises avec partage de documents, construite avec Next.js, TypeScript et Supabase.
+
+## 🏗️ Architecture
+- **Frontend**: Next.js 15 avec App Router
+- **Styling**: Tailwind CSS + shadcn/ui
+- **Backend**: Supabase (PostgreSQL + Auth + Storage)
+- **Types**: TypeScript strict
+- **Tests**: Jest
+
+## 🔧 Configuration MCP
+L'application utilise un serveur MCP personnalisé pour Supabase qui permet d'exécuter des requêtes SQL directement.
+
+### Serveur MCP Supabase
+```json
+{
+  "mcpServers": {
+    "supabase": {
+      "command": "node",
+      "args": ["mcp/supabase-mcp.js"],
+      "env": {
+        "NEXT_PUBLIC_SUPABASE_URL": "https://eiawccnqfmvdnvjlyftx.supabase.co",
+        "SUPABASE_SERVICE_ROLE_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVpYXdjY25xZm12ZG52amx5ZnR4Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDE2NzcyMSwiZXhwIjoyMDY5NzQzNzIxfQ.kuO58UgPjliHAbjgv2OKG0AbLmWpx3wZCcptke6B7Ik"
+      }
+    }
+  }
+}
+```
+
+## 🗄️ Outils MCP Disponibles
+
+### 1. `cleanup_database`
+Nettoie complètement la base de données (SUPPRIME TOUT)
+- **Confirmation**: Tapez "CONFIRM" pour confirmer
+
+### 2. `create_clean_schema`
+Crée le nouveau schéma propre de la base de données
+- **Confirmation**: Tapez "CONFIRM" pour confirmer
+
+### 3. `activate_rls`
+Active la sécurité RLS sur toutes les tables
+- **Confirmation**: Tapez "CONFIRM" pour confirmer
+
+### 4. `list_tables`
+Liste toutes les tables de la base de données
+- **Paramètres**: `schema` (optionnel, défaut: "public")
+
+### 5. `describe_table`
+Décrit la structure d'une table spécifique
+- **Paramètres**: `table_name` (requis), `schema` (optionnel)
+
+### 6. `check_rls_policies`
+Vérifie les politiques RLS sur une table
+- **Paramètres**: `table_name` (requis)
+
+## 📋 Conventions de Code
+
+### Structure des Dossiers
+```
+src/
+├── app/           # Pages Next.js (App Router)
+├── components/    # Composants React réutilisables
+├── hooks/         # Hooks React personnalisés
+├── lib/           # Utilitaires et configuration
+├── types/         # Types TypeScript
+└── utils/         # Fonctions utilitaires
+```
+
+### Naming Conventions
+- **Composants**: PascalCase (ex: `CompanyCard`)
+- **Hooks**: camelCase avec préfixe `use` (ex: `useAuth`)
+- **Types**: PascalCase (ex: `UserProfile`)
+- **Fonctions**: camelCase (ex: `formatDate`)
+- **Constantes**: UPPER_SNAKE_CASE (ex: `MAX_FILE_SIZE`)
+
+### Imports
+- **Composants**: `@/components/...`
+- **Hooks**: `@/hooks/...`
+- **Types**: `@/types/...`
+- **Utilitaires**: `@/lib/...`
+
+## 🔒 Sécurité
+
+### RLS (Row Level Security)
+- Toutes les tables ont RLS activé
+- Politiques basées sur les rôles utilisateur
+- Permissions granulaires selon les besoins
+
+### Authentification
+- Supabase Auth pour la gestion des utilisateurs
+- Sessions sécurisées avec cookies httpOnly
+- Middleware pour la protection des routes
+
+## 🧪 Tests
+
+### Structure des Tests
+```
+tests/
+├── unit/          # Tests unitaires
+├── integration/   # Tests d'intégration
+└── e2e/          # Tests end-to-end
+```
+
+### Commandes
+- `npm test` - Exécuter tous les tests
+- `npm run test:watch` - Tests en mode watch
+- `npm run test:coverage` - Tests avec couverture
+
+## 🚀 Développement
+
+### Commandes Principales
+- `npm run dev` - Serveur de développement
+- `npm run build` - Build de production
+- `npm run lint` - Vérification du code
+- `npm run type-check` - Vérification des types
+
+### Variables d'Environnement
+```bash
+# Copier le fichier d'exemple
+cp .env.example .env.local
+
+# Configurer les variables
+NEXT_PUBLIC_SUPABASE_URL=...
+SUPABASE_SERVICE_ROLE_KEY=...
+```
+
+## 📚 Documentation
+
+### Fichiers Importants
+- `README.md` - Documentation principale
+- `README_CLEANUP.md` - Guide de nettoyage
+- `scripts/` - Scripts de base de données et nettoyage
+
+### Base de Données
+- Schéma normalisé et sécurisé
+- Politiques RLS appropriées
+- Index pour les performances
+- Triggers pour la maintenance
+
+## 🎨 UI/UX
+
+### Design System
+- **Couleurs**: Palette cohérente avec Tailwind
+- **Typographie**: Hiérarchie claire des textes
+- **Espacement**: Système de spacing cohérent
+- **Composants**: shadcn/ui pour la cohérence
+
+### Responsive Design
+- Mobile-first approach
+- Breakpoints Tailwind standard
+- Navigation adaptative
+
+## 🔍 Débogage
+
+### Outils de Développement
+- React DevTools
+- Supabase Dashboard
+- Console navigateur
+- Logs serveur
+
+### Erreurs Communes
+- Vérifier la connexion Supabase
+- Contrôler les variables d'environnement
+- Vérifier les permissions RLS
+- Contrôler les types TypeScript
+
+---
+
+**💡 Conseil**: Utilisez le serveur MCP Supabase pour interagir directement avec la base de données et faciliter le développement !

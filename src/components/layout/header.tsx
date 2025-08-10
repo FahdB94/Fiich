@@ -44,10 +44,10 @@ export function Header() {
                   Tableau de bord
                 </Link>
             <Link
-              href="/companies"
+              href="/my-company"
               className="transition-colors hover:text-foreground/80 text-foreground/60"
             >
-              Mes entreprises
+              Ma Fiche
             </Link>
             <Link
               href="/shared-companies"

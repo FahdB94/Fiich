@@ -19,49 +19,30 @@ export const companyContactSchema = z.object({
 
 // Company validation schemas
 export const companySchema = z.object({
-  company_name: z.string().min(1, 'La raison sociale est requise').max(100, 'La raison sociale ne peut pas dépasser 100 caractères'),
-  siren: z.string().regex(/^\d{9}$/, 'Le SIREN doit contenir 9 chiffres').optional().or(z.literal('')),
-  siret: z.string().regex(/^\d{14}$/, 'Le SIRET doit contenir 14 chiffres').optional().or(z.literal('')),
-  address_line_1: z.string().min(1, 'L\'adresse est requise').max(100, 'L\'adresse ne peut pas dépasser 100 caractères'),
-  address_line_2: z.string().max(100, 'L\'adresse ne peut pas dépasser 100 caractères').optional().or(z.literal('')),
-  postal_code: z.string().min(1, 'Le code postal est requis').max(10, 'Le code postal ne peut pas dépasser 10 caractères'),
-  city: z.string().min(1, 'La ville est requise').max(50, 'La ville ne peut pas dépasser 50 caractères'),
-  country: z.string().min(1, 'Le pays est requis').max(50, 'Le pays ne peut pas dépasser 50 caractères'),
+  name: z.string().min(1, 'Le nom de l\'entreprise est requis').max(100, 'Le nom ne peut pas dépasser 100 caractères'),
+  description: z.string().max(500, 'La description ne peut pas dépasser 500 caractères').optional().or(z.literal('')),
+  logo_url: z.string().url('URL invalide').optional().or(z.literal('')),
+  website: z.string().url('URL invalide').optional().or(z.literal('')),
+  industry: z.string().max(100, 'Le secteur d\'activité ne peut pas dépasser 100 caractères').optional().or(z.literal('')),
+  size: z.string().max(50, 'La taille ne peut pas dépasser 50 caractères').optional().or(z.literal('')),
+  address: z.string().max(200, 'L\'adresse ne peut pas dépasser 200 caractères').optional().or(z.literal('')),
   phone: z.string().regex(/^(\+33|0)[1-9](\d{8})$/, 'Numéro de téléphone invalide').optional().or(z.literal('')),
   email: z.string().email('Email invalide'),
-  website: z.string().url('URL invalide').optional().or(z.literal('')),
-  description: z.string().max(500, 'La description ne peut pas dépasser 500 caractères').optional().or(z.literal('')),
-  // Nouvelles informations
-  ape_code: z.string().regex(/^\d{4}[A-Z]$/, 'Le code APE doit être au format 4 chiffres + 1 lettre').optional().or(z.literal('')),
-  vat_number: z.string().regex(/^[A-Z]{2}[A-Z0-9]{2,20}$/, 'Numéro de TVA intracommunautaire invalide').optional().or(z.literal('')),
-  payment_terms: z.array(z.string()).optional(),
-  rib: z.string()
-    .regex(/^[A-Z]{2}\d{2}[A-Z0-9]{4}\d{7}[A-Z0-9]{13}\d{2}$/, 'RIB invalide (format IBAN français attendu)')
-    .refine((val) => {
-      if (!val) return true // Optionnel
-      const cleaned = val.replace(/[^A-Za-z0-9]/g, '').toUpperCase()
-      return cleaned.length === 27
-    }, 'Le RIB doit contenir exactement 27 caractères')
-    .optional()
-    .or(z.literal('')),
-  contacts: z.array(companyContactSchema).optional(),
 })
 
 // Document validation schemas
 export const documentUploadSchema = z.object({
-  type: z.enum(['rib', 'kbis', 'contrat', 'facture', 'devis', 'autre']),
   name: z.string().min(1, 'Le nom du document est requis').max(100, 'Le nom ne peut pas dépasser 100 caractères'),
+  description: z.string().max(500, 'La description ne peut pas dépasser 500 caractères').optional().or(z.literal('')),
   is_public: z.boolean(),
 })
 
 // Share validation schemas
-export const sharePermissionSchema = z.enum(['view_company', 'view_documents', 'download_documents'])
+export const sharePermissionSchema = z.enum(['view', 'edit', 'delete'])
 
 export const shareFormSchema = z.object({
-  email: z.string().email('Email invalide'),
-  permissions: z.array(sharePermissionSchema).min(1, 'Au moins une permission est requise'),
+  permissions: z.record(z.boolean()).min(1, 'Au moins une permission est requise'),
   expires_at: z.string().datetime().optional(),
-  message: z.string().max(500, 'Le message ne peut pas dépasser 500 caractères').optional().or(z.literal('')),
 })
 
 // Auth validation schemas

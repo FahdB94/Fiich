@@ -1,8 +1,10 @@
+import { env } from '@/lib/env'
+
 export const siteConfig = {
   name: "Fiich",
   description: "Professional business identity card sharing platform",
-  url: process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3001",
-  ogImage: `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3001"}/og.jpg`,
+  url: env.NEXT_PUBLIC_APP_URL || "http://localhost:3001",
+  ogImage: `${env.NEXT_PUBLIC_APP_URL || "http://localhost:3001"}/og.jpg`,
   creator: "Fiich Team",
   keywords: [
     "business",
@@ -15,9 +17,9 @@ export const siteConfig = {
 }
 
 export const supabaseConfig = {
-  url: process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co',
-  anonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-anon-key',
-  serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
+  url: env.NEXT_PUBLIC_SUPABASE_URL,
+  anonKey: env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+  serviceRoleKey: env.SUPABASE_SERVICE_ROLE_KEY,
 }
 
 export const appConfig = {
